@@ -1,29 +1,44 @@
 # Product Requirements Document
 
 ## Vision
-_Describe what you are building and why._
+Perfect Day ist eine Web-App für Privatnutzer aller Fitnesslevel, die einen regelbasierten, personalisierten Trainingsplan, Kalorientracking und Fortschrittsvisualisierung in einer klaren, motivierenden Oberfläche vereint. Das Ziel: die tägliche Fitness-Routine einfacher, messbarer und nachhaltig motivierender machen.
 
 ## Target Users
-_Who will use this product? Describe their needs and pain points._
+**Privatnutzer aller Fitnesslevel** — vom Einsteiger bis zum Fortgeschrittenen.
+
+- **Einsteiger:** Überwältigt von Informationen, brauchen einen klaren Startpunkt und Orientierung
+- **Fortgeschrittene:** Wollen Fortschritt systematisch tracken und sich strukturiert verbessern
+- **Pain Points:** Bestehende Apps sind zu komplex (zu viele Features), zu teuer (Premium-Walls) oder bieten keine echte Personalisierung
 
 ## Core Features (Roadmap)
 
 | Priority | Feature | Status |
 |----------|---------|--------|
-| P0 (MVP) | _Feature 1_ | Planned |
-| P0 (MVP) | _Feature 2_ | Planned |
-| P1 | _Feature 3_ | Planned |
-| P2 | _Feature 4_ | Planned |
+| P0 (MVP) | Supabase Infrastructure Setup | Roadmap |
+| P0 (MVP) | User Onboarding & Profil | Roadmap |
+| P0 (MVP) | Übungsbibliothek | Roadmap |
+| P0 (MVP) | Adaptiver Trainingsplan | Roadmap |
+| P0 (MVP) | Fortschritts-Tracking & Streaks | Roadmap |
+| P1 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Roadmap |
+| P1 | Mobility Routine | Roadmap |
 
 ## Success Metrics
-_How will you measure success? (e.g., user signups, retention, task completion rate)_
+- 50+ aktive Nutzer nach dem ersten Monat nach Launch
+- 60% der Nutzer trainieren mindestens 3× pro Woche (gemessen an Streak-Daten)
+- 7-Tage-Retention > 40%
 
 ## Constraints
-_Budget, timeline, technical limitations, team size._
+- Solo-Projekt, Zielzeitraum: 2–3 Monate bis MVP-Launch
+- Tech-Stack: Next.js 16, Supabase, Tailwind CSS + shadcn/ui
+- Kein dediziertes Marketing-Budget
+- Design system: dunkel/modern/energetisch — siehe `docs/design-system.md`
+- Kalorientracking basiert auf Open Food Facts API (kostenlos, kein eigener Lebensmittel-Datenbankaufbau)
+- Trainingsplan-Logik: regelbasiert (kein LLM/KI) für den MVP
 
 ## Non-Goals
-_What are you explicitly NOT building in this version?_
-
----
-
-Use `/requirements` to create detailed feature specifications for each item in the roadmap above.
+- Kein Social-Feed oder Community-Features in v1
+- Kein KI-generierter Trainingsplan (kommt als Erweiterung nach MVP)
+- Keine native Mobile App — Start als Web App (PWA optional später)
+- Kein Premium-Modell / Paywall in v1
+- Keine Synchronisation mit Wearables (Apple Watch, Garmin, Fitbit) in v1
+- Kein Ernährungsplan-Generator — nur manuelles Food-Tracking

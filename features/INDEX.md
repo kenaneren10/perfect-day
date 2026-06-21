@@ -15,7 +15,14 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
+| PROJ-1 | Supabase Infrastructure Setup | Roadmap | — | 2026-06-21 |
+| PROJ-2 | User Onboarding & Profil (Ziele, Level, Equipment) | Roadmap | — | 2026-06-21 |
+| PROJ-3 | Übungsbibliothek (Kraft & Cardio) | Roadmap | — | 2026-06-21 |
+| PROJ-4 | Adaptiver Trainingsplan (regelbasiert) | Roadmap | — | 2026-06-21 |
+| PROJ-5 | Fortschritts-Tracking & Streaks | Roadmap | — | 2026-06-21 |
+| PROJ-6 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Roadmap | — | 2026-06-21 |
+| PROJ-7 | Mobility Routine | Roadmap | — | 2026-06-21 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-1
+## Next Available ID: PROJ-8
