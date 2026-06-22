@@ -14,8 +14,8 @@ Perfect Day ist eine Web-App für Privatnutzer aller Fitnesslevel, die einen reg
 
 | Priority | Feature | Status |
 |----------|---------|--------|
-| P0 (MVP) | Supabase Infrastructure Setup | Roadmap |
-| P0 (MVP) | User Onboarding & Profil | Roadmap |
+| P0 (MVP) | Supabase Infrastructure Setup | Planned |
+| P0 (MVP) | User Onboarding & Profil | Planned |
 | P0 (MVP) | Übungsbibliothek | Roadmap |
 | P0 (MVP) | Adaptiver Trainingsplan | Roadmap |
 | P0 (MVP) | Fortschritts-Tracking & Streaks | Roadmap |

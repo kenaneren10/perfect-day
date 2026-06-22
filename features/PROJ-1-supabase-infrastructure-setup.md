@@ -254,7 +254,7 @@ CREATE TRIGGER on_profiles_updated
 | Playwright E2E-Tests | 4/4 bestanden |
 | TypeScript-Kompilierung | Sauber |
 | Production Build | Erfolgreich |
-| Security Audit | 1 Medium, 1 Low |
+| Security Audit | 1 Low (Medium behoben) |
 
 ### Acceptance Criteria — Testergebnis
 
@@ -300,10 +300,9 @@ CREATE TRIGGER on_profiles_updated
 **Auswirkung:** Auth funktioniert erst wieder korrekt, wenn `.env.local` manuell neu erstellt wird.  
 **Fix:** `.env.local` manuell mit korrekten Zeilenumbrüchen neu anlegen (siehe unten).
 
-#### 🟡 MEDIUM — Fehlende Security Headers
-**Beschreibung:** Der Proxy setzt keine Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Strict-Transport-Security`). Anforderung laut Security Rules.  
-**Auswirkung:** Clickjacking- und MIME-Sniffing-Risiko in Production.  
-**Fix:** Security Headers im Proxy via `supabaseResponse.headers.set(...)` hinzufügen.
+#### ~~🟡 MEDIUM — Fehlende Security Headers~~ ✅ Behoben
+**Beschreibung:** Der Proxy setzte keine Security Headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Strict-Transport-Security`).  
+**Fix:** `applySecurityHeaders()`-Hilfsfunktion in `src/proxy.ts` ergänzt — wird auf jedem Response gesetzt, auch beim Env-Vars-Fallback. Zusätzlich: Env-Var-Namen-Leak im Error-Log entfernt.
 
 #### 🟢 LOW — Port-Konflikt: fremder Prozess auf Port 3000
 **Beschreibung:** Ein unbekannter Prozess belegt Port 3000 dauerhaft auf diesem System. Unsere App läuft auf Port 3001, Playwright-Config wurde angepasst.  
@@ -327,7 +326,7 @@ CREATE TRIGGER on_profiles_updated
 | Keine echten Credentials in Git committed | ✅ Nur Platzhalter in `.env.local.example` |
 | OAuth Redirect-URL an `origin` gebunden | ✅ Next.js bindet `request.url` an eigene Domain |
 | RLS auf `profiles` aktiviert | ✅ SQL-Migration ausgeführt |
-| Security Headers im Proxy | ❌ Fehlen — Medium-Bug |
+| Security Headers im Proxy | ✅ Implementiert in `src/proxy.ts` |
 
 ### Nächste Schritte vor OAuth-Aktivierung
 
@@ -345,7 +344,7 @@ EOF
 ```
    *(Jede Variable auf einer eigenen Zeile — die obige Version ist korrekt formatiert)*
 
-2. **Security Headers** im Proxy ergänzen (Medium-Bug — vor Production-Go-live)
+2. ~~**Security Headers** im Proxy ergänzen~~ ✅ Erledigt
 
 3. **Auth-Flow-Tests** nach Implementierung von PROJ-2 nachholen
 
