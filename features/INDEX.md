@@ -19,7 +19,7 @@
 | PROJ-2 | User Onboarding & Profil (Ziele, Level, Equipment) | Approved | [spec](PROJ-2-user-onboarding-profil.md) | 2026-06-21 |
 | PROJ-3 | Übungsbibliothek (Kraft & Cardio) | Approved | [spec](PROJ-3-uebungsbibliothek.md) | 2026-06-21 |
 | PROJ-4 | Adaptiver Trainingsplan (regelbasiert) | Approved | [spec](PROJ-4-adaptiver-trainingsplan.md) | 2026-06-21 |
-| PROJ-5 | Fortschritts-Tracking & Streaks | Roadmap | — | 2026-06-21 |
+| PROJ-5 | Fortschritts-Tracking & Streaks | Planned | [spec](PROJ-5-fortschritts-tracking-streaks.md) | 2026-06-21 |
 | PROJ-6 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Roadmap | — | 2026-06-21 |
 | PROJ-7 | Mobility Routine | Roadmap | — | 2026-06-21 |
 
