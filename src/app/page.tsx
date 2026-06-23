@@ -4,12 +4,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Dumbbell, User, Calendar } from 'lucide-react'
 import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
+import { calculateStreak } from '@/lib/session/streak'
 import type { ProgressStats } from '@/types/session'
-
-function getDayOfWeek(date: Date): number {
-  const d = date.getDay()
-  return d === 0 ? 7 : d
-}
 
 async function loadProgressStats(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -56,15 +52,13 @@ async function loadProgressStats(
 
     const plannedThisWeek = plan?.training_days_per_week ?? 0
 
-    // Streak: count of last completed sessions with no gaps on training days
-    // Simplified version: consecutive days going backward from yesterday
+    // Compute streak using pure function
     let streak = 0
     const { data: allSessions } = await supabase
       .from('workout_sessions')
       .select('completed_at')
       .eq('user_id', userId)
       .eq('status', 'completed')
-      .order('completed_at', { ascending: false })
 
     if (plan) {
       const { data: planDays } = await supabase
@@ -78,19 +72,7 @@ async function loadProgressStats(
         (allSessions ?? []).map((s: { completed_at: string }) => s.completed_at.split('T')[0]),
       )
 
-      const todayStr = today.toISOString().split('T')[0]
-      const todayDow = getDayOfWeek(today)
-      if (trainingWeekdays.has(todayDow) && completedDates.has(todayStr)) streak++
-
-      for (let daysBack = 1; daysBack <= 365; daysBack++) {
-        const d = new Date(today)
-        d.setDate(d.getDate() - daysBack)
-        const dateStr = d.toISOString().split('T')[0]
-        const weekday = getDayOfWeek(d)
-        if (!trainingWeekdays.has(weekday)) continue
-        if (completedDates.has(dateStr)) streak++
-        else break
-      }
+      streak = calculateStreak(trainingWeekdays, completedDates, today)
     }
 
     return {

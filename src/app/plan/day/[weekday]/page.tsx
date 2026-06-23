@@ -77,11 +77,19 @@ export default async function WorkoutDayPage({ params }: Props) {
   let completedSummary: SessionSummary | null = null
 
   try {
+    // Only load today's session — previous weeks' completions are in /history
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayEnd = new Date()
+    todayEnd.setHours(23, 59, 59, 999)
+
     const { data: sessionData } = await supabase
       .from('workout_sessions')
       .select('*')
       .eq('user_id', user.id)
       .eq('plan_day_id', planDay.id)
+      .gte('started_at', todayStart.toISOString())
+      .lte('started_at', todayEnd.toISOString())
       .order('started_at', { ascending: false })
       .limit(1)
       .single()

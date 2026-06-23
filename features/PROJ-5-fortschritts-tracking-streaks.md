@@ -326,7 +326,35 @@ Für MVP mit < 200 Sessions pro Nutzer ist diese Berechnung in Millisekunden —
 - `startSession` re-uses existing in_progress session rather than returning an error (better UX)
 
 ## Implementation Notes (Backend)
-_To be added by /backend_
+**Date:** 2026-06-23
+
+### Database Migration
+- `supabase/migrations/20260623002000_proj5_session_tracking.sql`
+  - `workout_sessions`: user_id, plan_day_id, status ('in_progress'|'completed'), started_at, completed_at
+  - `session_sets`: session_id, plan_exercise_id, set_number, weight_kg, reps, duration_minutes + UNIQUE(session_id, plan_exercise_id, set_number) for upsert
+  - RLS on both tables (sessions: user_id = auth.uid(); sets: via session JOIN)
+  - 7 performance indexes (date-range queries, status filter, completed_at DESC for streak)
+
+### Streak Calculation (Pure Function)
+- `src/lib/session/streak.ts` — `calculateStreak(trainingWeekdays, completedDates, today)` pure function
+  - Rules: training days with sessions extend streak; rest days skip without breaking; missed training day breaks
+  - Spec-correct: today's pending training doesn't break streak (breaks at midnight next day)
+- 17 unit tests covering: no sessions, today only, consecutive days, missed days, rest-day handling, 5-day plans
+
+### Server Actions
+- `src/app/session/actions.ts` — startSession, logSet, completeSession
+  - `startSession`: now scoped to today's date range — prevents showing last week's completed session
+  - `logSet`: upserts on (session_id, plan_exercise_id, set_number) — allows corrections
+  - `completeSession`: marks completed, computes summary, triggers progression if count ≥ 8×(sets_bonus+1)
+  - `fetchAndComputeStreak`: loads training weekdays + completed dates from DB, delegates to pure function
+
+### Manual Step Required
+Run `supabase/migrations/20260623002000_proj5_session_tracking.sql` in Supabase SQL Editor before using the session features.
+
+### Key Design Decisions
+- No UNIQUE(user_id, plan_day_id) at DB level — allows multiple sessions per weekday (one per calendar week)
+- Session scope is date-based: startSession checks for today's sessions only, preventing cross-week conflicts
+- Streak computed dynamically from DB data — no cache/counter table to keep in sync
 
 ## QA Test Results
 _To be added by /qa_

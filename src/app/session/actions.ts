@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { calculateStreak, toISODateStr, toDayOfWeek } from '@/lib/session/streak'
 import type { SessionSummary } from '@/types/session'
 
 export async function startSession(
@@ -11,16 +12,26 @@ export async function startSession(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Nicht authentifiziert' }
 
-  // Check for existing in_progress session for this day
+  const today = new Date()
+  const todayStart = new Date(today)
+  todayStart.setHours(0, 0, 0, 0)
+  const todayEnd = new Date(today)
+  todayEnd.setHours(23, 59, 59, 999)
+
+  // Check for existing session TODAY for this plan_day
   const { data: existing } = await supabase
     .from('workout_sessions')
-    .select('id')
+    .select('id, status')
     .eq('user_id', user.id)
     .eq('plan_day_id', planDayId)
-    .eq('status', 'in_progress')
+    .gte('started_at', todayStart.toISOString())
+    .lte('started_at', todayEnd.toISOString())
+    .order('started_at', { ascending: false })
+    .limit(1)
     .single()
 
   if (existing) {
+    // Resume in_progress or return completed session
     revalidatePath('/plan')
     return { sessionId: existing.id }
   }
@@ -135,8 +146,8 @@ export async function completeSession(
       .eq('user_id', user.id)
   }
 
-  // Compute streak
-  const streak = await computeStreak(supabase, user.id)
+  // Compute streak using pure function
+  const streak = await fetchAndComputeStreak(supabase, user.id)
 
   revalidatePath('/plan')
   revalidatePath('/')
@@ -153,8 +164,10 @@ export async function completeSession(
   }
 }
 
-async function computeStreak(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<number> {
-  // Get user's plan training days (which weekdays are training days)
+async function fetchAndComputeStreak(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<number> {
   const { data: plan } = await supabase
     .from('workout_plans')
     .select('id')
@@ -169,47 +182,21 @@ async function computeStreak(supabase: Awaited<ReturnType<typeof createClient>>,
     .eq('plan_id', plan.id)
     .eq('is_rest_day', false)
 
-  const trainingWeekdays = new Set((trainingDays ?? []).map((d: { day_of_week: number }) => d.day_of_week))
-
-  // Get all completed sessions ordered by completed_at desc
   const { data: sessions } = await supabase
     .from('workout_sessions')
     .select('completed_at')
     .eq('user_id', userId)
     .eq('status', 'completed')
-    .order('completed_at', { ascending: false })
 
+  const trainingWeekdays = new Set(
+    (trainingDays ?? []).map((d: { day_of_week: number }) => d.day_of_week),
+  )
   const completedDates = new Set(
     (sessions ?? []).map((s: { completed_at: string }) => s.completed_at.split('T')[0]),
   )
 
-  // Walk backwards from yesterday, counting consecutive training days with completed sessions
-  let streak = 0
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Check if today has a completed session (if it's a training day)
-  const todayStr = today.toISOString().split('T')[0]
-  const todayDow = today.getDay() === 0 ? 7 : today.getDay()
-  if (trainingWeekdays.has(todayDow) && completedDates.has(todayStr)) {
-    streak++
-  }
-
-  // Walk backwards from yesterday
-  for (let daysBack = 1; daysBack <= 365; daysBack++) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - daysBack)
-    const dateStr = d.toISOString().split('T')[0]
-    const dow = d.getDay() === 0 ? 7 : d.getDay()
-
-    if (!trainingWeekdays.has(dow)) continue // rest day — skip
-
-    if (completedDates.has(dateStr)) {
-      streak++
-    } else {
-      break // missed a training day — streak ends
-    }
-  }
-
-  return streak
+  return calculateStreak(trainingWeekdays, completedDates, today)
 }
