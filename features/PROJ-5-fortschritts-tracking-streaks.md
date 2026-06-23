@@ -1,6 +1,6 @@
 # PROJ-5: Fortschritts-Tracking & Streaks
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -359,7 +359,7 @@ Run `supabase/migrations/20260623002000_proj5_session_tracking.sql` in Supabase 
 ## QA Test Results
 **Date:** 2026-06-23
 **QA Engineer:** Claude (automated)
-**Status:** NOT READY — 1 High bug must be fixed
+**Status:** APPROVED — All bugs fixed, build passes
 
 ### Automated Tests
 | Suite | Tests | Result |
@@ -461,12 +461,12 @@ Run `supabase/migrations/20260623002000_proj5_session_tracking.sql` in Supabase 
 - ✅ Vitest: 51/51 unit tests pass (includes pre-existing PROJ-2/3/4 tests)
 
 ### Production-Ready Decision
-**NOT READY** — BUG-001 (High) causes build failure. BUG-002 and BUG-003 (Medium) should also be fixed before deployment.
+**READY** — All 3 bugs fixed in follow-up commit:
+- BUG-001: Imported `toDayOfWeek` from `@/lib/session/streak` in `src/app/page.tsx` → build passes
+- BUG-002: Replaced inline streak loop in `/history` with `calculateStreak()` using all-time sessions
+- BUG-003: Added `status = 'in_progress'` ownership check in `logSet` server action
 
-Priority for fixes:
-1. BUG-001 (blocking — must fix before any deployment)
-2. BUG-002 (streak inconsistency — visible to all users with long streaks)
-3. BUG-003 (data integrity — allows retroactive stat inflation)
+Remaining Low-severity items (BUG-004 timezone edge case) are acceptable for MVP scope.
 
 ## Deployment
 _To be added by /deploy_

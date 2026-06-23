@@ -60,6 +60,18 @@ export async function logSet(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Nicht authentifiziert' }
 
+  // Only allow writing to in_progress sessions
+  const { data: session } = await supabase
+    .from('workout_sessions')
+    .select('status')
+    .eq('id', sessionId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!session || session.status !== 'in_progress') {
+    return { error: 'Einheit ist bereits abgeschlossen' }
+  }
+
   const { error } = await supabase
     .from('session_sets')
     .upsert(

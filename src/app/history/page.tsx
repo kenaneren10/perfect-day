@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Flame, Dumbbell } from 'lucide-react'
 import { TrainingCalendar } from '@/components/history/TrainingCalendar'
+import { calculateStreak } from '@/lib/session/streak'
 import type { DayStatus } from '@/types/session'
 
 function toLocalDateStr(date: Date): string {
@@ -148,17 +149,17 @@ export default async function HistoryPage() {
         }
       }
 
-      // Compute streak (consecutive training days completed)
-      for (let i = days.length - 1; i >= 0; i--) {
-        const day = days[i]
-        if (day.isFuture) continue
-        if (!day.isTrainingDay) continue
-        if (day.sessionCompleted) {
-          currentStreak++
-        } else if (!day.isToday) {
-          break
-        }
-      }
+      // Compute streak from all-time completed sessions (not just 4-week window)
+      const { data: allSessions } = await supabase
+        .from('workout_sessions')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+
+      const allCompletedDates = new Set(
+        (allSessions ?? []).map((s: { completed_at: string }) => s.completed_at.split('T')[0]),
+      )
+      currentStreak = calculateStreak(trainingWeekdays, allCompletedDates, today)
     }
   } catch {
     // Tables not yet migrated

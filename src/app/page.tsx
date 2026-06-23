@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Dumbbell, User, Calendar } from 'lucide-react'
 import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
-import { calculateStreak } from '@/lib/session/streak'
+import { calculateStreak, toDayOfWeek } from '@/lib/session/streak'
 import type { ProgressStats } from '@/types/session'
 
 async function loadProgressStats(
@@ -26,7 +26,7 @@ async function loadProgressStats(
     // This week (Mon–Sun)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const dow = getDayOfWeek(today)
+    const dow = toDayOfWeek(today)
     const monday = new Date(today)
     monday.setDate(today.getDate() - dow + 1)
     const sunday = new Date(monday)
