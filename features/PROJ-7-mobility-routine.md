@@ -1,6 +1,6 @@
 # PROJ-7: Mobility Routine
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -105,13 +105,129 @@
 ### Technical Decisions
 | Decision | Rationale | Date |
 |----------|-----------|------|
-| _Wird von /architecture ergänzt_ | — | — |
+| Übungsdaten als statische Konstante im Code (kein DB-Eintrag) | Inhalt ist unveränderlich; kein Admin-UI nötig; kein Migrations-Aufwand; sofort verfügbar ohne DB-Abfrage | 2026-06-23 |
+| `completed_on DATE` mit UNIQUE(user_id, completed_on) statt TIMESTAMPTZ | Tagesbasiertes Tracking braucht keinen Zeitstempel; UNIQUE-Constraint macht INSERT idempotent ohne App-Logik | 2026-06-23 |
+| Server Action für Completion (kein API-Route) | Passt zum Projekt-Pattern (PROJ-5, PROJ-6); kein separater HTTP-Endpunkt nötig; CSRF-Schutz durch Next.js | 2026-06-23 |
+| MobilityPlayer als einziger Client Component | Nur der Timer/Player braucht Browser-APIs (setInterval); Übersichtsseite und Dashboard-Widget sind Server Components | 2026-06-23 |
+| Übersicht und Player auf derselben Route `/mobility` | Kein URL-Wechsel beim Start der Routine; einfacheres State-Management; bessere UX (kein History-Entry) | 2026-06-23 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Neue Routen
+
+| Route | Zugriffsschutz | Zweck |
+|-------|---------------|-------|
+| `/mobility` | Eingeloggt (Redirect zu `/login`) | Routine-Übersicht + Player (ein View, zwei Zustände) |
+
+Das Dashboard (`/`) wird um das **MobilityWidget** erweitert — keine neue Route.
+
+---
+
+### Datenbankstruktur
+
+#### Neue Tabelle: `mobility_completions`
+
+Eine Zeile pro User pro Tag, an dem die Routine abgeschlossen wurde.
+
+| Feld | Typ | Bedeutung |
+|------|-----|-----------|
+| `id` | UUID | Primärschlüssel |
+| `user_id` | UUID → auth.users | Eigentümer des Eintrags |
+| `completed_on` | Datum (YYYY-MM-DD) | Tag der Completion |
+
+**Constraint:** UNIQUE(`user_id`, `completed_on`) — verhindert doppelte Einträge auf DB-Ebene; INSERT mit ON CONFLICT DO NOTHING ist automatisch idempotent.
+
+**RLS:** Nutzer liest und schreibt nur eigene Einträge.
+
+**Index:** Primär-Abfrage ist `SELECT WHERE user_id = … AND completed_on = heute` — ein Index auf `(user_id, completed_on)` deckt das ab.
+
+---
+
+### Statische Übungsdaten
+
+Die 8 Mobility-Übungen werden **nicht in der Datenbank gespeichert**, sondern als konstante Liste im Code (`src/lib/mobility/exercises.ts`). Kein DB-Fetch beim Player, kein Admin-UI nötig.
+
+Jede Übung hat:
+- **Name** (z. B. „Nackenrollen")
+- **Ausführungshinweis** (1–2 Sätze)
+- **Dauer** in Sekunden (immer 30)
+
+---
+
+### Komponentenstruktur
+
+#### Dashboard `/` (erweitert)
+
+```
+DashboardPage (Server Component)
+│
+├── ProgressStatsWidget  (PROJ-5, bestehend)
+├── [NEU] MobilityWidget  (nur wenn User eingeloggt)
+│   ├── [Heute offen]  "Tägliche Mobility" + Button „Starten" → /mobility
+│   └── [Heute erledigt]  "Tägliche Mobility ✓" (kein Button)
+├── CalorieWidget  (PROJ-6, bestehend)
+└── Quick-Links
+```
+
+#### Mobility-Seite `/mobility`
+
+```
+MobilityPage (Server Component)
+│   Lädt: user, heutigen Completion-Status aus DB
+│
+├── [Nicht eingeloggt]  → redirect /login
+│
+├── [Eingeloggt, Zustand = "Übersicht"]
+│   MobilityOverview
+│   ├── Titel: „Deine tägliche Mobility"
+│   ├── Meta: 8 Übungen · ca. 8 Minuten
+│   ├── Übungsliste (statisch, alle 8 mit Name)
+│   ├── [Heute offen]   Button „Routine starten" → übergibt an MobilityPlayer
+│   └── [Heute erledigt] Badge „Heute erledigt ✓" + Button „Erneut starten"
+│
+└── MobilityPlayer (Client Component)
+    │   Zustand: currentIndex (0–7), phase ('playing' | 'done')
+    │
+    ├── [phase = 'playing']
+    │   ├── Fortschritt: „Übung X von 8" + Progress-Balken
+    │   ├── Übungsname (groß)
+    │   ├── Ausführungshinweis
+    │   ├── Countdown-Timer (30 → 0, setInterval)
+    │   ├── Button „Weiter" (überspringt restliche Timer-Zeit)
+    │   └── Button „Abbrechen" → zurück zur Übersicht, kein Completion
+    │
+    └── [phase = 'done']
+        ├── Erfolgsmeldung „Routine abgeschlossen 🎉"
+        ├── „8 von 8 Übungen absolviert"
+        ├── Button „Zurück zum Dashboard" → /
+        └── [Completion wird gespeichert sobald phase='done' erreicht wird]
+```
+
+---
+
+### Server Action
+
+| Action | Aufruf durch | Effekt |
+|--------|-------------|--------|
+| `completeMobilityRoutine()` | MobilityPlayer (bei Wechsel zu phase='done') | INSERT in `mobility_completions` (user_id, heute) — ON CONFLICT DO NOTHING; revalidatePath('/') + revalidatePath('/mobility') |
+
+---
+
+### Keine neuen npm-Pakete
+
+| Tool | Verwendung |
+|------|-----------|
+| `setInterval` (Browser-API) | Countdown-Timer im Player |
+| `shadcn/ui` Progress | Fortschrittsbalken im Player |
+| `shadcn/ui` Button, Badge | Standard-UI |
+| `lucide-react` | Icons (Timer, CheckCircle, Play) |
+| Supabase Server Client | DB-Abfragen + Server Actions |
+| Sonner (Toast) | Feedback bei Completion-Fehler |
+
+**Kein neues npm-Paket notwendig.**
 
 ## QA Test Results
 _To be added by /qa_

@@ -21,7 +21,7 @@
 | PROJ-4 | Adaptiver Trainingsplan (regelbasiert) | Approved | [spec](PROJ-4-adaptiver-trainingsplan.md) | 2026-06-21 |
 | PROJ-5 | Fortschritts-Tracking & Streaks | Approved | [spec](PROJ-5-fortschritts-tracking-streaks.md) | 2026-06-21 |
 | PROJ-6 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Approved | [spec](PROJ-6-kalorienrechner-food-tracking.md) | 2026-06-21 |
-| PROJ-7 | Mobility Routine | Planned | [spec](PROJ-7-mobility-routine.md) | 2026-06-21 |
+| PROJ-7 | Mobility Routine | Architected | [spec](PROJ-7-mobility-routine.md) | 2026-06-21 |
 
 <!-- Add features above this line -->
 
