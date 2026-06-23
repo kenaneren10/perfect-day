@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Dumbbell, User } from 'lucide-react'
+import { Dumbbell, User, Calendar } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -49,24 +49,31 @@ export default async function DashboardPage() {
             </div>
           </Link>
 
-          {/* Coming soon placeholders */}
-          {[
-            { title: 'Trainingsplan', description: 'Dein personalisierter Wochenplan' },
-            { title: 'Fortschritt & Streaks', description: 'Deine Trainingshistorie & Erfolge' },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-5 flex items-center gap-4 opacity-50"
-            >
-              <div className="h-12 w-12 bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-                <span className="text-xl">🔒</span>
+          {/* Trainingsplan */}
+          <Link href="/plan">
+            <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 flex items-center gap-4 transition-colors cursor-pointer group">
+              <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center shrink-0">
+                <Calendar className="h-6 w-6 text-green-400" />
               </div>
               <div>
-                <p className="font-semibold text-zinc-400">{item.title}</p>
-                <p className="text-sm text-zinc-600">{item.description} — kommt bald</p>
+                <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
+                  Trainingsplan
+                </p>
+                <p className="text-sm text-zinc-400">Dein personalisierter Wochenplan</p>
               </div>
             </div>
-          ))}
+          </Link>
+
+          {/* Coming soon placeholder */}
+          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-5 flex items-center gap-4 opacity-50">
+            <div className="h-12 w-12 bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+              <span className="text-xl">🔒</span>
+            </div>
+            <div>
+              <p className="font-semibold text-zinc-400">Fortschritt & Streaks</p>
+              <p className="text-sm text-zinc-600">Deine Trainingshistorie & Erfolge — kommt bald</p>
+            </div>
+          </div>
         </div>
       </div>
     </main>

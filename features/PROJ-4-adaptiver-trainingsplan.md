@@ -1,6 +1,6 @@
 # PROJ-4: Adaptiver Trainingsplan (regelbasiert)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -371,7 +371,27 @@ Alle drei neuen Tabellen bekommen Row Level Security:
 | Kein A/B-Wochenrotations-System in MVP | Regeleinfachheit vor Abwechslung; gleiche Übungen jede Woche bis zum Fortschritt; Rotation ist `/refine`-Kandidat | 2026-06-23 |
 
 ## Implementation Notes (Frontend)
-_To be added by /frontend_
+**Date:** 2026-06-23
+
+### Files Created
+- `src/types/plan.ts` — WorkoutPlan, PlanDay, PlanExercise, PlanDayWithExercises types + FOCUS_LABELS, DAY_NAMES, DAY_ABBREVIATIONS maps
+- `src/app/plan/actions.ts` — Server Action stubs: generatePlan, regeneratePlan, confirmProgression, dismissProgression (to be implemented by /backend)
+- `src/app/plan/page.tsx` — Plan overview page: shows PlanSetupCard if no plan, WeeklyPlanView + ProgressionBanner if plan exists
+- `src/app/plan/day/[weekday]/page.tsx` — Day detail page: shows ordered exercise list with effective sets (base_sets + sets_bonus)
+- `src/components/plan/PlanSetupCard.tsx` — 3/4/5 day selector with radio-style cards + generate button
+- `src/components/plan/WeeklyPlanView.tsx` — Renders 7 PlanDayCards in order, fills missing days as rest days, highlights today
+- `src/components/plan/PlanDayCard.tsx` — Individual day card: training days link to day detail, rest days show muted moon icon; green border for "heute"
+- `src/components/plan/ProgressionBanner.tsx` — Progression notification with "Anpassen" / "Nicht jetzt" buttons
+- `src/components/plan/RegeneratePlanDialog.tsx` — AlertDialog confirmation for plan regeneration
+- `src/components/plan/WorkoutExerciseCard.tsx` — Exercise display with sets × reps and link to exercise detail
+
+### Files Updated
+- `src/app/page.tsx` — Dashboard: Trainingsplan placeholder replaced with real link to /plan (Calendar icon, same style as Übungsbibliothek)
+
+### Deviations from Spec
+- Server Actions are stubs returning `{}` or `{ error: '...' }` — full plan generation logic (rule engine + DB writes) implemented by /backend skill
+- Day detail page gracefully handles missing exercises with empty state message
+- "Training starten" button is present but disabled with "kommt bald" hint (PROJ-5 placeholder)
 
 ## Implementation Notes (Backend)
 _To be added by /backend_
