@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Dumbbell, User, Calendar } from 'lucide-react'
+import { Dumbbell, User, Calendar, Flame } from 'lucide-react'
 import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
 import { CalorieWidget } from '@/components/nutrition/CalorieWidget'
 import { MobilityWidget } from '@/components/mobility/MobilityWidget'
@@ -199,6 +199,20 @@ export default async function DashboardPage() {
                   Trainingsplan
                 </p>
                 <p className="text-sm text-zinc-400">Dein personalisierter Wochenplan</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/nutrition">
+            <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 flex items-center gap-4 transition-colors cursor-pointer group">
+              <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center shrink-0">
+                <Flame className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
+                  Kalorienzähler
+                </p>
+                <p className="text-sm text-zinc-400">Ernährung & Food-Tracking</p>
               </div>
             </div>
           </Link>
