@@ -1,6 +1,6 @@
 # PROJ-6: Kalorienrechner mit Food-Tracking & Barcode Scanner
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -104,7 +104,7 @@
 
 - [ ] Soll es eine Datumswahl im Tagebuch geben (z.B. um vergangene Tage einzusehen)? → Aktuell: nur heute (P2)
 - [ ] Sollen Makroziele vom Nutzer manuell angepasst werden können (z.B. Low-Carb)? → Aktuell: automatisch aus TDEE abgeleitet (P2)
-- [ ] Open Food Facts API: Ist die offizielle API ausreichend für deutsche Lebensmittel, oder soll die `de.openfoodfacts.org`-Instanz genutzt werden?
+- [x] Open Food Facts API: Ist die offizielle API ausreichend für deutsche Lebensmittel, oder soll die `de.openfoodfacts.org`-Instanz genutzt werden? → **Entschieden: `world.openfoodfacts.org` mit `lc=de`** — bessere Gesamtabdeckung
 
 ## Decision Log
 
@@ -122,11 +122,226 @@
 | Custom Food Out of Scope für MVP | Erhöht Datenbankaufwand deutlich; Open Food Facts deckt den Großteil verpackter Produkte ab | 2026-06-23 |
 | Kalorienverbrauch durch Training NICHT anrechnen | Zu komplex (PROJ-5-Integration, Schätzung MET-Werte pro Übung); potenzielle P2-Erweiterung | 2026-06-23 |
 
+### Technical Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Open Food Facts über Next.js API Route (Proxy), kein direkter Browser-Call | Open Food Facts erlaubt keine CORS-Anfragen aus dem Browser; Proxy ist die einzige valide Option | 2026-06-23 |
+| Kein npm-Paket für Barcode-Scanner | Browser-native BarcodeDetector API (Chrome/Edge) reicht; kein Bundle-Overhead; Fallback auf manuelle Eingabe für Firefox/Safari | 2026-06-23 |
+| `calorie_goal` als berechneter Wert in `profiles` gespeichert | Vermeidet TDEE-Neuberechnung bei jedem Seitenaufruf; einfache Leseoperation statt Rechnung | 2026-06-23 |
+| `logFood` empfängt per-100g-Nährwerte vom Client, Proportional-Berechnung auf Server | Client kann Nährwerte nicht fälschen; nur eigene Daten betroffen; server-seitige Berechnung verhindert manipulierte Summen | 2026-06-23 |
+| `date`-Feld als DATE (nicht TIMESTAMPTZ) in food_diary_entries | Tagebuch ist datum-basiert; vereinfacht Tagesabfragen; kein Mitternacht-UTC-Problem | 2026-06-23 |
+| `world.openfoodfacts.org` mit `lc=de` Parameter | Weltweite Datenbank + deutsche Sprach-Präferenz; besserer Abdeckungsgrad als `de.openfoodfacts.org` | 2026-06-23 |
+| TDEE-Logik als pure Utility-Funktionen (src/lib/nutrition/) | Ermöglicht Vitest-Unit-Tests ohne DB-Mocks; gleiche Funktionen für Live-Preview im Client nutzbar | 2026-06-23 |
+
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Neue Routen
+
+| Route | Zugriffsschutz | Zweck |
+|-------|---------------|-------|
+| `/nutrition` | Eingeloggt + Onboarding abgeschlossen | Tages-Tagebuch + Kalorien-/Makro-Fortschritt |
+| `/nutrition/setup` | Eingeloggt + Onboarding abgeschlossen | TDEE-Einrichtung (Körperdaten + Aktivitätslevel) |
+| `/api/nutrition/search` | Eingeloggt | Next.js API Route: Proxy zu Open Food Facts Textsuche |
+| `/api/nutrition/barcode/[barcode]` | Eingeloggt | Next.js API Route: Proxy zu Open Food Facts Barcode-Lookup |
+
+Alle Routen werden durch die bestehende PROJ-2-Middleware automatisch geschützt — kein zusätzlicher Auth-Guard nötig.
+
+---
+
+### Datenbankstruktur
+
+#### Erweiterung: `profiles`-Tabelle
+PROJ-6 erweitert die bestehende `profiles`-Tabelle (aus PROJ-2) um folgende Spalten:
+
+| Neue Spalte | Typ | Bedeutung |
+|-------------|-----|-----------|
+| `height_cm` | Ganzzahl, null erlaubt | Körpergröße in cm |
+| `weight_kg` | Dezimalzahl, null erlaubt | Körpergewicht in kg |
+| `birth_year` | Ganzzahl, null erlaubt | Geburtsjahr (für Altersberechnung) |
+| `biological_sex` | Text (`'male'`/`'female'`), null erlaubt | Für Mifflin-St Jeor Formel |
+| `activity_level` | Text (5 Werte), null erlaubt | Aktivitätsmultiplikator für TDEE |
+| `calorie_goal` | Ganzzahl, null erlaubt | Gespeichertes Tagesziel in kcal (null = noch nicht eingerichtet) |
+
+Aktivitätslevel-Werte: `sedentary` · `lightly_active` · `moderately_active` · `very_active` · `extra_active`
+
+#### Neue Tabelle: `food_diary_entries`
+Eine Zeile pro geloggtem Lebensmittel.
+
+| Feld | Typ | Bedeutung |
+|------|-----|-----------|
+| `id` | UUID | Primärschlüssel |
+| `user_id` | UUID → auth.users | Eigentümer des Eintrags |
+| `date` | Datum (YYYY-MM-DD) | Tagebuch-Tag (nicht Uhrzeit) |
+| `meal_type` | Text | `breakfast` / `lunch` / `dinner` / `snacks` |
+| `food_name` | Text | Produktname (aus Open Food Facts oder manuell) |
+| `food_off_id` | Text, null erlaubt | Open Food Facts Barcode/ID; null bei Einträgen ohne OFF-Referenz |
+| `serving_g` | Dezimalzahl | Portionsgröße in Gramm |
+| `kcal` | Dezimalzahl | Berechnete Kalorien für diese Portion |
+| `protein_g` | Dezimalzahl | Berechnetes Protein in g |
+| `carbs_g` | Dezimalzahl | Berechnete Kohlenhydrate in g |
+| `fat_g` | Dezimalzahl | Berechnetes Fett in g |
+| `logged_at` | Zeitstempel | Wann eingetragen |
+
+**RLS:** Nutzer liest und schreibt nur eigene Einträge (`user_id = auth.uid()`).
+**Index:** Auf `(user_id, date)` — tägliche Abfragen sind der häufigste Zugriffstyp.
+
+---
+
+### Komponentenstruktur
+
+#### Tages-Tagebuch — `/nutrition`
+
+```
+NutritionPage (Server Component — lädt Profile + heutige Einträge aus DB)
+│
+├── [calorie_goal = null] SetupBanner
+│   └── "Kalorienziel einrichten" → Link zu /nutrition/setup
+│
+├── [calorie_goal gesetzt] DailyProgressSection
+│   ├── CalorieProgressBar  →  „X / Y kcal  (Z %)"
+│   └── MacroProgressRow
+│       ├── MacroBar  Protein   X / Y g
+│       ├── MacroBar  Kohlenhydrate  X / Y g
+│       └── MacroBar  Fett       X / Y g
+│
+├── MealSection × 4  (Frühstück / Mittagessen / Abendessen / Snacks)
+│   ├── MealHeader  (Label + kcal-Summe der Mahlzeit)
+│   ├── FoodEntryRow × N
+│   │   ├── Produktname · Portion · kcal
+│   │   └── DeleteButton  → AlertDialog  → deleteFood() Server Action
+│   └── AddFoodTrigger (Button)  → öffnet FoodSearchSheet für diese Mahlzeit
+│
+└── FoodSearchSheet (Client Component — shadcn Sheet, slide-in von unten)
+    ├── BarcodeButton  → BarcodeScanner
+    ├── SearchInput  (3+ Zeichen → GET /api/nutrition/search)
+    ├── SearchResultsList
+    │   └── SearchResultItem × N  (Name · Marke · kcal/100g)
+    │       └── Klick  → PortionStep
+    └── PortionStep
+        ├── Produktname + Nährwerte pro 100g (Übersicht)
+        ├── ServingInput  (Gramm, Standard: 100 g)
+        ├── Live-Preview: berechnete kcal + Makros für eingegebene Portion
+        └── LogButton  → logFood() Server Action  → revalidatePath('/nutrition')
+```
+
+#### TDEE-Setup — `/nutrition/setup`
+
+```
+NutritionSetupPage (Server Component — lädt aktuelle Profildaten)
+│
+└── NutritionSetupForm (Client Component)
+    ├── BiologicalSexSelect       Männlich / Weiblich
+    ├── BirthYearInput            Jahreszahl (z. B. 1990)
+    ├── HeightInput               cm (100–250)
+    ├── WeightInput               kg (30–300)
+    ├── ActivityLevelSelect       5 Stufen (Sitzend → Sehr aktiv)
+    ├── LivePreview               „Berechnetes Kalorienziel: X kcal" (Client-seitig aktualisiert)
+    ├── ManualOverrideInput       Optional: eigenes Ziel überschreiben
+    └── SaveButton  → saveNutritionSetup() Server Action  → redirect /nutrition
+```
+
+#### Barcode-Scanner (Client Component, in FoodSearchSheet eingebettet)
+
+```
+BarcodeScanner
+├── [BarcodeDetector API verfügbar]
+│   ├── Kamera-Permission-Anfrage
+│   ├── Video-Vorschau (live stream)
+│   └── Erkennungs-Loop  → Treffer: GET /api/nutrition/barcode/[code]  → PortionStep
+└── [BarcodeDetector nicht verfügbar  ODER  Kamera verweigert]
+    └── ManualBarcodeInput  (Textfeld + „Suchen"-Button  → GET /api/nutrition/barcode/[code])
+```
+
+#### Dashboard `/` (erweitert)
+
+```
+DashboardPage (Server Component)
+│
+├── [NEU]  CalorieWidget  (nur wenn calorie_goal gesetzt und workout_sessions table exists)
+│   ├── CalorieProgressBar  (kompakt: X / Y kcal heute)
+│   └── Link  → /nutrition
+│
+├── [bestehend] ProgressStatsWidget (PROJ-5)
+└── [bestehend] Quick-Links
+```
+
+---
+
+### Server Actions
+
+| Action | Aufruf durch | Effekt |
+|--------|-------------|--------|
+| `saveNutritionSetup(data)` | NutritionSetupForm | Berechnet TDEE + Zielanpassung, speichert 6 Felder in `profiles` |
+| `logFood(entry)` | FoodSearchSheet LogButton | Validiert, berechnet Makros proportional, inserted in `food_diary_entries` |
+| `deleteFood(entryId)` | FoodEntryRow DeleteButton | Löscht eigenen Eintrag (User-Ownership-Check + RLS) |
+
+**`saveNutritionSetup` — TDEE-Logik:**
+1. Mifflin-St Jeor BMR berechnen (geschlechtsabhängig)
+2. Mit Aktivitätsmultiplikator multiplizieren → TDEE
+3. Fitnessziel aus `profiles.goal` auslesen:
+   - `weight_loss` → TDEE − 500 kcal
+   - `muscle_gain` → TDEE + 300 kcal
+   - `fitness` / `flexibility` / null → TDEE unverändert
+4. Falls `calorie_goal_override` eingegeben → dieser Wert ersetzt die Berechnung
+5. Ergebnis in `profiles.calorie_goal` speichern
+
+**`logFood` — Makro-Berechnung:**
+- Client übermittelt: Produktname, OFF-ID (optional), Nährwerte per 100g, Portionsgröße in g
+- Server berechnet: `kcal = kcal_per_100g × serving_g / 100` (analog für Makros)
+- Server speichert die absoluten Werte — kein Vertrauen in client-seitig berechnete Summen
+
+---
+
+### API Routes (Open Food Facts Proxy)
+
+#### `GET /api/nutrition/search?q={query}`
+- Leitet weiter an: `https://world.openfoodfacts.org/cgi/search.pl?search_terms={q}&action=process&json=1&page_size=10&lc=de`
+- Filtert Response: nur Produkte mit vollständigen Nährwerten (kcal > 0)
+- Gibt zurück: `{ products: [{ id, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g }] }`
+- Auth: Session aus Supabase-Cookie prüfen (kein anonymer Zugriff)
+- Timeout: 5 Sekunden; bei Fehler → HTTP 502 mit `{ error: "API nicht erreichbar" }`
+
+#### `GET /api/nutrition/barcode/[barcode]`
+- Leitet weiter an: `https://world.openfoodfacts.org/api/v2/product/{barcode}.json`
+- Gibt bei Erfolg das gleiche Produkt-Format zurück
+- Bei `status: 0` (nicht gefunden) → HTTP 404
+
+---
+
+### Pure Utility-Funktionen
+
+Untergebracht in `src/lib/nutrition/`:
+
+| Funktion | Input | Output |
+|----------|-------|--------|
+| `calculateTDEE(weight_kg, height_cm, birth_year, sex, activity_level)` | Körperdaten | `{ bmr, tdee }` |
+| `applyGoalAdjustment(tdee, goal)` | TDEE + Fitnessziel | Angepasstes Kalorienziel |
+| `deriveMacroTargets(calorie_goal, weight_kg)` | Kalorienziel + Gewicht | `{ protein_g, fat_g, carbs_g }` |
+| `calcPortionNutrients(per100g, serving_g)` | Nährwerte/100g + Gramm | Absolute Nährwerte für Portion |
+
+Diese Funktionen sind rein (kein DB-Zugriff) und werden mit Vitest unit-getestet.
+
+---
+
+### Bestehende Komponenten & Pakete
+
+| Komponente / Tool | Verwendung |
+|------------------|-----------|
+| `shadcn/ui` Sheet | FoodSearchSheet (slide-in Suche) |
+| `shadcn/ui` Progress | CalorieProgressBar, MacroBar |
+| `shadcn/ui` AlertDialog | Löschen-Bestätigung |
+| `shadcn/ui` Input | Suchfeld, Portion, manuelle Barcode-Eingabe |
+| `shadcn/ui` Select | Geschlecht, Aktivitätslevel |
+| `shadcn/ui` Button, Badge, Separator | Standard-UI-Elemente |
+| `lucide-react` | Icons: Camera, Search, Trash2, Flame, Target |
+| Supabase Server Client | Alle DB-Abfragen + Server Actions |
+| Sonner (Toast) | Feedback nach Eintragen / Löschen |
+| Browser BarcodeDetector API | Barcode-Scan (kein npm-Paket) |
+
+**Kein neues npm-Paket notwendig.**
 
 ## QA Test Results
 _To be added by /qa_
