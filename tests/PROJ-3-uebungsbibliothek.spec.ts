@@ -7,33 +7,33 @@ import { test, expect } from '@playwright/test'
 // ── Unauthenticated Redirects ─────────────────────────────────────────────
 
 test.describe('Zugangsschutz — Nicht eingeloggter Nutzer', () => {
-  test('GET /exercises → Redirect zur Startseite', async ({ page }) => {
+  test('GET /exercises → Redirect zur Login-Seite', async ({ page }) => {
     // Angenommen ein nicht eingeloggter Nutzer versucht /exercises aufzurufen
-    // Dann wird er zur Login-Seite (/) weitergeleitet
+    // Dann wird er zur Login-Seite weitergeleitet (PROJ-2 Middleware: /login)
     const response = await page.goto('/exercises')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/login')
     expect(response?.status()).not.toBe(500)
   })
 
-  test('GET /exercises/some-id → Redirect zur Startseite', async ({ page }) => {
+  test('GET /exercises/some-id → Redirect zur Login-Seite', async ({ page }) => {
     // Angenommen ein nicht eingeloggter Nutzer versucht eine Detail-URL aufzurufen
-    // Dann wird er zur Login-Seite (/) weitergeleitet
+    // Dann wird er zur Login-Seite weitergeleitet
     await page.goto('/exercises/550e8400-e29b-41d4-a716-446655440000')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/login')
   })
 
-  test('GET /exercises/new → Redirect zur Startseite', async ({ page }) => {
+  test('GET /exercises/new → Redirect zur Login-Seite', async ({ page }) => {
     // Angenommen ein nicht eingeloggter Nutzer versucht das Create-Formular aufzurufen
-    // Dann wird er zur Login-Seite (/) weitergeleitet
+    // Dann wird er zur Login-Seite weitergeleitet
     await page.goto('/exercises/new')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/login')
   })
 
-  test('GET /exercises/some-id/edit → Redirect zur Startseite', async ({ page }) => {
+  test('GET /exercises/some-id/edit → Redirect zur Login-Seite', async ({ page }) => {
     // Angenommen ein nicht eingeloggter Nutzer versucht das Edit-Formular aufzurufen
-    // Dann wird er zur Login-Seite (/) weitergeleitet
+    // Dann wird er zur Login-Seite weitergeleitet
     await page.goto('/exercises/550e8400-e29b-41d4-a716-446655440000/edit')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/login')
   })
 })
 

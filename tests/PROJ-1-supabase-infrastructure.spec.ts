@@ -5,19 +5,20 @@ import { test, expect } from '@playwright/test'
 // Auth-Flow-Tests (E-Mail, Google, Apple) folgen in PROJ-2 QA.
 
 test.describe('Auth Callback Route', () => {
-  test('Redirect ohne Code — landet auf /', async ({ page }) => {
+  test('Redirect ohne Code — landet auf /login', async ({ page }) => {
     // Angenommen jemand ruft /auth/callback ohne OAuth-Code auf
-    // Dann wird er zur Startseite weitergeleitet (kein Fehler)
+    // Dann leitet der Callback nach / weiter, PROJ-2-Middleware schickt unauthenticated
+    // Nutzer weiter zu /login — kein Fehler
     const response = await page.goto('/auth/callback')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/login')
     expect(response?.status()).not.toBe(500)
   })
 
   test('Unbekannte Query-Parameter werden ignoriert', async ({ page }) => {
     // Angenommen /auth/callback wird mit unbekannten Parametern aufgerufen
-    // Dann bleibt die App stabil und leitet zur Startseite weiter
+    // Dann bleibt die App stabil und landet auf /login (via Middleware)
     await page.goto('/auth/callback?foo=bar&baz=123')
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/login')
   })
 })
 
