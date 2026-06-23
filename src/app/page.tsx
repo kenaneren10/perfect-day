@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dumbbell, User, Calendar } from 'lucide-react'
 import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
 import { CalorieWidget } from '@/components/nutrition/CalorieWidget'
+import { MobilityWidget } from '@/components/mobility/MobilityWidget'
 import { calculateStreak, toDayOfWeek } from '@/lib/session/streak'
 import type { ProgressStats } from '@/types/session'
 
@@ -124,6 +125,21 @@ export default async function DashboardPage() {
     }
   }
 
+  // Mobility widget: today's completion status
+  let mobilityCompletedToday = false
+  try {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const { data: mc } = await supabase
+      .from('mobility_completions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('completed_on', todayStr)
+      .maybeSingle()
+    mobilityCompletedToday = !!mc
+  } catch {
+    // table not yet migrated
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -151,6 +167,11 @@ export default async function DashboardPage() {
             <CalorieWidget consumed={consumedKcal} goal={calorieGoal} />
           </div>
         )}
+
+        {/* Mobility widget (PROJ-7) */}
+        <div className="mb-4">
+          <MobilityWidget completedToday={mobilityCompletedToday} />
+        </div>
 
         {/* Quick Links */}
         <div className="space-y-4">
