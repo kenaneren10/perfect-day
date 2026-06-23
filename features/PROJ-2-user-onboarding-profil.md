@@ -326,6 +326,19 @@ ProfilePage (Server Component — lädt aktuelles Profil aus DB)
 - **ResendButton email input**: If `pendingEmail` sessionStorage key is missing (user navigated directly), a manual email input is shown so the user can still request a resend.
 - **SelectionCard reuse**: `SelectionRow` (compact) variant used in ProfileForm; `SelectionCard` (full with description) in OnboardingFlow — same visual pattern, sized differently for context.
 
+## Implementation Notes (Backend)
+**Date:** 2026-06-23
+
+### Database Migration
+- `supabase/migrations/20260623000000_proj2_profiles_onboarding.sql`
+  - Added enum types: `user_goal`, `fitness_level`, `user_equipment`
+  - Added 4 columns to `profiles`: `goal`, `fitness_level`, `equipment`, `onboarding_completed` (default `false`)
+  - Partial index on `onboarding_completed = false` for admin/analytics queries
+  - No new RLS policies — existing PROJ-1 policies (users read/write own row) cover all new columns
+
+### Manual Step Required
+Run `supabase/migrations/20260623000000_proj2_profiles_onboarding.sql` in the Supabase SQL Editor before testing onboarding.
+
 ## QA Test Results
 _To be added by /qa_
 
