@@ -394,7 +394,38 @@ Alle drei neuen Tabellen bekommen Row Level Security:
 - "Training starten" button is present but disabled with "kommt bald" hint (PROJ-5 placeholder)
 
 ## Implementation Notes (Backend)
-_To be added by /backend_
+**Date:** 2026-06-23
+
+### Database Migration
+- `supabase/migrations/20260623001000_proj4_trainingsplan.sql`
+  - Extends `profiles` with `training_days_per_week INTEGER CHECK (IN (3,4,5))`
+  - New table `workout_plans` with `UNIQUE(user_id)` — one active plan per user
+  - New table `plan_days` with `UNIQUE(plan_id, day_of_week)` — 7 rows per plan
+  - New table `plan_exercises` with ordered position per day
+  - Full RLS on all 3 tables (owner-only access via chain: plan_exercises → plan_days → workout_plans)
+  - Indexes on: user_id, (plan_id, day_of_week), (day_id, position)
+
+### Plan Generation Engine
+- `src/lib/plan/generate.ts` — pure functions + Supabase-dependent `buildPlanDays` + `persistPlan`
+  - `getTrainingDays(n)` — returns fixed weekday numbers (Mon=1…Sun=7) for 3/4/5 day plans
+  - `getFocusSequence(goal, days)` — goal × days → ordered array of focus types
+  - `getAllowedEquipment(equipment)` — returns equipment hierarchy for DB `.in()` filter
+  - `getExerciseConfig(level, goal)` — returns { count, baseSets, repsMin, repsMax }
+  - `buildPlanDays(supabase, profile, days)` — queries exercise library (with equipment filter + overlap on muscle_groups), shuffles candidates, selects N per day
+  - `persistPlan(supabase, userId, days, plannedDays)` — writes workout_plans → plan_days → plan_exercises in sequence
+
+### Server Actions Implemented
+- `generatePlan(days)` — validates days (3/4/5), loads profile, saves training_days_per_week, calls buildPlanDays + persistPlan
+- `regeneratePlan()` — deletes existing plan (CASCADE removes child rows), generates new plan with current profile settings
+- `confirmProgression()` — reads sets_bonus, writes sets_bonus+1 + progression_pending=false
+- `dismissProgression()` — writes progression_pending=false
+
+### Manual Step Required
+Run `supabase/migrations/20260623001000_proj4_trainingsplan.sql` in Supabase SQL Editor before using the /plan page.
+
+### Notes
+- Progression trigger (setting `progression_pending = true`) will be implemented in PROJ-5 when session tracking is available. Currently the flag can only be set manually via SQL or when PROJ-5 is deployed.
+- Custom exercises are automatically included in the exercise pool via RLS (policy shows system + own exercises)
 
 ## QA Test Results
 _To be added by /qa_
