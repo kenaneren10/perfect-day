@@ -1,6 +1,6 @@
 # PROJ-5: Fortschritts-Tracking & Streaks
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -91,9 +91,9 @@
 
 ## Open Questions
 
-- [ ] Soll die Abschluss-Zusammenfassung direkt als Modal/Overlay oder als separate `/session/[id]/complete`-Route erscheinen? (Empfehlung: Overlay, um den Kontext des Trainingstags zu erhalten)
-- [ ] Wie viele Wochen soll die History-Ansicht zeigen? (Empfehlung: 4 Wochen / 1 Monat; ältere Daten in DB vorhanden, aber UI zeigt nur 4 Wochen)
-- [ ] Soll Volumen (kg × Wdh summed over all exercises) als Metrik sichtbar sein? (Empfehlung: Ja, als sekundäre Kennzahl in der Abschluss-Zusammenfassung)
+- [x] Abschluss-Zusammenfassung als Modal oder Route? → **Entschieden: Inline-Block auf der Trainingsseite** (kein Modal, kein Extra-Route)
+- [x] Wie viele Wochen zeigt die History? → **Entschieden: 4 Wochen** (ältere Daten in DB, UI begrenzt auf 4 Wochen)
+- [x] Volumen als Metrik? → **Entschieden: Ja**, als sekundäre Kennzahl in SessionSummaryBlock
 
 ## Decision Log
 
@@ -108,11 +108,197 @@
 | Progressionsschwelle = 8 × (sets_bonus + 1) | Verhindert endloses Auslösen nach erster Progression; zweite Stufe nach 16, dritte nach 24 Sessions | 2026-06-23 |
 | Gewicht ist optional (Bodyweight = 0) | Nicht alle Übungen brauchen Gewicht; optionales Feld senkt Einstiegshürde | 2026-06-23 |
 
+### Technical Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Satz-Logging sofort in DB (kein "Speichern am Ende") | Verhindert Datenverlust bei Browser-Schließen; Upsert-Logik ermöglicht trotzdem Korrektur | 2026-06-23 |
+| UNIQUE(user_id, plan_day_id) auf workout_sessions | Doppelte Sessions per DB-Constraint unmöglich — keine Prüfung im Applikationscode nötig | 2026-06-23 |
+| Upsert statt Insert für session_sets | Nutzer kann Satz-Wert korrigieren, ohne Duplikat zu erzeugen; simpler als Delete+Insert | 2026-06-23 |
+| Streak dynamisch berechnet (keine Streak-Tabelle) | Vermeidet Sync-Probleme zwischen Cache und echten Sessions; bei MVP-Skala (< 200 Sessions) performant | 2026-06-23 |
+| Session-Zusammenfassung als Inline-Block (kein Modal) | Einfachste Implementierung; vermeidet Navigation-Probleme nach Server Action | 2026-06-23 |
+| `/plan/day/[weekday]` erweitert statt neue `/session/[id]`-Route | Session ist immer an einen Plan-Tag gebunden; kein separater Einstiegspunkt nötig | 2026-06-23 |
+| Gewicht und Reps nullable (nicht 0 als Default) | Unterschied zwischen "Bodyweight (0 kg)" und "keine Angabe (null)" ist semantisch wichtig für spätere PR-Berechnung | 2026-06-23 |
+
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Neue Routen
+
+| Route | Zugriffsschutz | Zweck |
+|-------|---------------|-------|
+| `/plan/day/[weekday]` | Eingeloggt + Onboarding (bestehend) | Erweitert: Session starten, Sätze loggen, Einheit abschließen |
+| `/history` | Eingeloggt + Onboarding | Neu: 4-Wochen-Kalender der Trainingshistorie |
+| `/` (Dashboard) | Eingeloggt + Onboarding (bestehend) | Erweitert: Fortschritts-Widget mit Streak + Wochenfortschritt |
+
+Beide neuen Seiten werden automatisch durch die bestehende PROJ-2-Middleware geschützt — kein zusätzlicher Guard nötig.
+
+---
+
+### Datenbankstruktur
+
+**Tabelle 1: `workout_sessions`** — eine Zeile pro Trainingseinheit
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| id | UUID | Primärschlüssel |
+| user_id | UUID → auth.users | Eigentümer der Session |
+| plan_day_id | UUID → plan_days | Verknüpfung mit PROJ-4-Plantag |
+| status | TEXT | `'in_progress'` oder `'completed'` |
+| started_at | TIMESTAMPTZ | Wann "Training starten" geklickt wurde |
+| completed_at | TIMESTAMPTZ | Wann abgeschlossen (null wenn in_progress) |
+
+Constraints:
+- `UNIQUE(user_id, plan_day_id)` — maximal eine Session pro Tag und Nutzer
+- RLS: Nutzer sieht nur eigene Sessions
+
+**Tabelle 2: `session_sets`** — eine Zeile pro geloggtem Satz
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| id | UUID | Primärschlüssel |
+| session_id | UUID → workout_sessions (CASCADE) | Zugehörige Session |
+| plan_exercise_id | UUID → plan_exercises | Welche geplante Übung |
+| set_number | INTEGER | Satznummer (1, 2, 3…) |
+| weight_kg | DECIMAL | Gewicht in kg (null = Bodyweight) |
+| reps | INTEGER | Wiederholungen (null bei Cardio) |
+| duration_minutes | DECIMAL | Dauer in Minuten (nur Cardio, sonst null) |
+| logged_at | TIMESTAMPTZ | Wann der Satz gespeichert wurde |
+
+Constraints:
+- `UNIQUE(session_id, plan_exercise_id, set_number)` — kein Satz-Duplikat; Upsert ermöglicht Korrektur
+- RLS: Nutzer sieht nur Sätze eigener Sessions (via JOIN auf workout_sessions.user_id)
+
+---
+
+### Komponentenstruktur
+
+#### Trainingstag-Detail — `/plan/day/[weekday]` (erweitert)
+
+```
+WorkoutDayPage (Server Component — lädt Plandaten + aktuelle Session aus DB)
+│
+├── DayHeader (bestehend — Fokus-Label + Zurück-Link)
+│
+├── [Kein Plan / Ruhetag] — Redirect zu /plan (bestehend)
+│
+├── [Trainingstag — keine aktive Session]:
+│   ├── WorkoutExerciseCard × N (read-only, bestehend)
+│   └── StartWorkoutButton (Client) → startSession Server Action
+│
+├── [Trainingstag — Session "in_progress"]:
+│   ├── SessionTimerBar (Client — zeigt verstrichene Zeit HH:MM)
+│   └── ActiveExerciseList (Client Component)
+│       └── ExerciseSetLogger × N (eine Karte pro Übung)
+│           ├── Übungsname + geplante Vorgabe (z.B. "3 Sätze × 8–12 Wdh")
+│           ├── SetRow × (base_sets + sets_bonus)
+│           │   ├── Kraft-Übung: [Gewicht kg] [Wdh] [✓ Speichern]
+│           │   └── Cardio-Übung: [Dauer (Min)] [✓ Speichern]
+│           └── Bereits gespeicherte Sätze: grün hervorgehoben
+│   └── CompleteWorkoutButton (Client) → completeSession Server Action
+│
+└── [Session "completed"]:
+    └── SessionSummaryBlock (inline, kein Modal)
+        ├── ✅ Einheit abgeschlossen!
+        ├── 🔥 Aktueller Streak: X Tage
+        ├── Abgeschlossene Sätze: X / Y geplante
+        ├── Gesamtvolumen: X kg
+        ├── Dauer: MM:SS
+        └── Weiter-Links: [→ Zurück zum Plan] [→ History]
+```
+
+#### Trainingshistorie — `/history` (neu)
+
+```
+HistoryPage (Server Component — lädt 4 Wochen Sessions aus DB)
+│
+├── PageHeader: "Trainingshistorie"
+│
+├── StreakSummaryRow
+│   ├── 🔥 Aktueller Streak: X Tage
+│   └── Einheiten gesamt: X
+│
+└── TrainingCalendar (Client Component — 4 × 7 Grid)
+    ├── Wochentag-Header: Mo Di Mi Do Fr Sa So
+    └── WeekRow × 4
+        └── DayCell × 7
+            ├── ✅ Grün — Trainingstag abgeschlossen
+            ├── ❌ Rot/Gedimmt — Trainingstag verpasst
+            ├── 💤 Grau — Ruhetag (kein Plan-Tag)
+            └── ○ Neutral — Heute / Zukunft
+        + DayDetailPopover (on click auf grünen Tag)
+            └── Übungsname × N + geloggtes Volumen + Dauer
+```
+
+#### Dashboard — `/` (erweitert)
+
+```
+HomePage (Server Component — lädt Streak + Wochenfortschritt)
+│
+├── [NEU] ProgressStatsWidget
+│   ├── 🔥 Streak: X Tage
+│   ├── Diese Woche: X / Y Trainings
+│   └── Einheiten gesamt: X
+│
+└── [bestehend] Quick-Links: Trainingsplan, Übungsbibliothek
+```
+
+---
+
+### Server Actions
+
+| Action | Aufruf durch | Effekt |
+|--------|-------------|--------|
+| `startSession(planDayId)` | StartWorkoutButton | Erstellt `workout_sessions` mit status='in_progress' |
+| `logSet(sessionId, planExerciseId, setNumber, data)` | SetRow [✓ Speichern] | Upsert in `session_sets` |
+| `completeSession(sessionId)` | CompleteWorkoutButton | Setzt status='completed' + Progression-Check |
+
+**Progression-Check in `completeSession`:**
+1. Zählt alle `completed` Sessions des Nutzers
+2. Liest `sets_bonus` aus `workout_plans`
+3. Schwelle = `8 × (sets_bonus + 1)` — falls überschritten: `progression_pending = true`
+
+---
+
+### Streak-Berechnung (serverseitig)
+
+Keine separate Streak-Tabelle — Streak wird bei jedem Dashboard-/History-Aufruf dynamisch berechnet:
+
+1. Lade alle `plan_days` des Nutzers (welche Wochentage sind Trainingstage?)
+2. Lade alle `workout_sessions` mit status='completed' (sortiert nach Datum)
+3. Gehe rückwärts vom gestrigen Tag:
+   - Trainingstag + Session abgeschlossen → Streak +1, weiter
+   - Trainingstag + Session fehlt → Streak endet hier
+   - Ruhetag / kein Plan-Tag → überspringen, Streak bleibt
+4. Prüfe heute: Wenn Trainingstag und bereits completed → zählt mit
+
+Für MVP mit < 200 Sessions pro Nutzer ist diese Berechnung in Millisekunden — keine Performance-Probleme.
+
+---
+
+### Datenbank-Zugriffssicherheit (RLS)
+
+- **workout_sessions**: `user_id = auth.uid()` — Nutzer liest/schreibt nur eigene Sessions
+- **session_sets**: Zugriff über JOIN: `session_id IN (SELECT id FROM workout_sessions WHERE user_id = auth.uid())`
+
+---
+
+### Bestehende Komponenten & Pakete
+
+| Komponente / Paket | Verwendung in PROJ-5 |
+|-------------------|---------------------|
+| `shadcn/ui` Card | ExerciseSetLogger, SessionSummaryBlock |
+| `shadcn/ui` Input | Gewicht-Eingabe, Wdh-Eingabe, Dauer-Eingabe |
+| `shadcn/ui` Button | Satz speichern, Training starten, Einheit abschließen |
+| `shadcn/ui` Popover | DayDetailPopover in History-Kalender |
+| `shadcn/ui` Badge | Session-Status, Streak-Anzeige |
+| `shadcn/ui` Separator | Trennung Übungen in SetLogger |
+| `lucide-react` | Icons: Flame (Streak), CheckCircle, Clock, Dumbbell |
+| Supabase Server Client | Alle Datenbankabfragen und Server Actions |
+| Sonner (Toast) | Feedback nach Satz-Speichern und Session-Abschluss |
+
+**Kein neues npm-Paket notwendig.**
 
 ## Implementation Notes (Frontend)
 _To be added by /frontend_
