@@ -1,6 +1,6 @@
 # PROJ-5: Fortschritts-Tracking & Streaks
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -357,7 +357,116 @@ Run `supabase/migrations/20260623002000_proj5_session_tracking.sql` in Supabase 
 - Streak computed dynamically from DB data — no cache/counter table to keep in sync
 
 ## QA Test Results
-_To be added by /qa_
+**Date:** 2026-06-23
+**QA Engineer:** Claude (automated)
+**Status:** NOT READY — 1 High bug must be fixed
+
+### Automated Tests
+| Suite | Tests | Result |
+|-------|-------|--------|
+| Vitest unit (streak.ts) | 17 | ✅ All pass |
+| Vitest total | 51 | ✅ All pass |
+| E2E Chromium (unauthenticated) | 2 | ✅ All pass |
+| E2E authenticated | 20 | ⏭ Skipped (no test credentials) |
+| PROJ-4 regression (Chromium) | 4 | ✅ No regressions |
+
+### Acceptance Criteria — Manual Code Review
+*(E2E authenticated tests require `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` env vars)*
+
+#### Training starten
+- [ ] SKIP (DB not migrated in test env)
+- [ ] SKIP
+- [ ] SKIP
+- [ ] SKIP
+- [ ] SKIP
+
+#### Einheit abschließen
+- [ ] SKIP
+- [ ] SKIP
+- [ ] SKIP
+- [ ] SKIP
+
+#### Streak-Logik
+- ✅ Pure function `calculateStreak` tested with 17 unit tests — all rules implemented correctly
+- ✅ Rest-day skip logic correct
+- ✅ "Today pending" does not break streak (breaks at midnight next day)
+- ✅ Streak 0 for new users
+- ✅ Restart after missed day
+
+#### Dashboard & Fortschrittsanzeige
+- ❌ **FAIL** — Build error: `getDayOfWeek` undefined in `src/app/page.tsx:29` (see BUG-001)
+- ✅ Empty state implemented (ProgressStatsWidget with "Starte dein erstes Training")
+- ✅ Widget shows streak, week progress, total count (code review)
+
+#### Trainingshistorie
+- ✅ `/history` route exists and redirects unauthenticated users
+- ✅ 4-week calendar grid implemented (code review)
+- ✅ Color coding: green/red/gray/blue per spec
+- ✅ Popover on completed days (code review)
+- ⚠️ Streak calculation in `/history` differs from dashboard (see BUG-002)
+
+#### Adaptive Progression (PROJ-4-Anbindung)
+- ✅ `completeSession` triggers `progression_pending = true` at threshold (code review)
+- ✅ Threshold formula: `8 × (sets_bonus + 1)` implemented correctly
+
+### Bugs Found
+
+#### BUG-001 — HIGH: Build fails — `getDayOfWeek` undefined in dashboard
+- **Severity:** High
+- **File:** `src/app/page.tsx:29`
+- **Steps to reproduce:** Run `npm run build` — TypeScript error: `Cannot find name 'getDayOfWeek'`
+- **Root cause:** `getDayOfWeek` is used in `loadProgressStats()` but is never defined or imported. The equivalent `toDayOfWeek` is already exported from `@/lib/session/streak` but not imported here. The local `getDayOfWeek` exists in `src/app/history/page.tsx` but not in `page.tsx`.
+- **Impact:** Dashboard page `/` fails to compile. Production build impossible.
+- **Fix:** Import `toDayOfWeek` from `@/lib/session/streak` and rename usage, or define `getDayOfWeek` locally.
+
+#### BUG-002 — MEDIUM: Streak calculation inconsistency between /history and dashboard
+- **Severity:** Medium
+- **File:** `src/app/history/page.tsx:152–161`
+- **Steps to reproduce:** User with >28 consecutive training days opens `/history` vs `/`. History shows lower streak than dashboard.
+- **Root cause:** `/history` computes streak via an inline loop over only the 28-day calendar window. The dashboard uses `calculateStreak()` (pure function, up to 365 days). A user with a streak >28 days would see different numbers on the two pages.
+- **Fix:** Replace the inline streak loop in `/history` with a call to `calculateStreak()` (same as dashboard and `fetchAndComputeStreak`).
+
+#### BUG-003 — MEDIUM: `logSet` allows writing to completed sessions
+- **Severity:** Medium
+- **File:** `src/app/session/actions.ts:53–78`
+- **Steps to reproduce:** Call `logSet(completedSessionId, ...)` for a session with `status='completed'`. No error is returned; set is inserted/updated.
+- **Root cause:** `logSet` checks authentication but does not verify that the session is `in_progress`. RLS allows writes as long as the session belongs to the user.
+- **Impact:** Users can retroactively add sets to a completed session, inflating volume statistics and set counts in the history popover.
+- **Fix:** In `logSet`, add a check: verify `workout_sessions.status = 'in_progress'` before upserting.
+
+#### BUG-004 — LOW: Timezone edge case — session date may appear on wrong calendar day
+- **Severity:** Low
+- **File:** `src/app/session/actions.ts:194`, `src/app/history/page.tsx:99`
+- **Root cause:** `completed_at.split('T')[0]` extracts the UTC date. For sessions completed between 00:00–02:00 Berlin time (UTC+1/+2), the UTC date would be the previous calendar day, causing the wrong day to be highlighted in the calendar.
+- **Impact:** Cosmetic — session appears on wrong day in `/history` calendar for late-night/early-morning sessions.
+- **Fix:** Convert `completed_at` to local date string using the user's timezone before splitting.
+
+### Security Audit
+- ✅ RLS on `workout_sessions`: `user_id = auth.uid()` — cross-user access blocked
+- ✅ RLS on `session_sets`: Access via JOIN on parent session — cross-user access blocked
+- ✅ All server actions check `auth.getUser()` before DB operations
+- ✅ `completeSession` verifies `user_id = user.id` — prevents completing another user's session
+- ✅ No secrets exposed in source code or browser
+- ✅ DB constraints handle invalid input: `CHECK (reps >= 0)`, `CHECK (set_number >= 1)`, DECIMAL limits
+- ⚠️ `logSet` does not check session ownership beyond RLS (RLS covers it, but no explicit error message)
+- ⚠️ `startSession` accepts any `planDayId` without validating it belongs to user's plan (Low — session is owner-scoped)
+
+### Responsive & Cross-Browser
+- ✅ Chromium: unauthenticated redirect tests pass
+- ❌ Mobile Safari: pre-existing browser binary issue (not a PROJ-5 regression)
+- Responsive layout: not manually verified (DB not available in test env)
+
+### Regression
+- ✅ PROJ-4 Chromium regression: 4/4 tests pass
+- ✅ Vitest: 51/51 unit tests pass (includes pre-existing PROJ-2/3/4 tests)
+
+### Production-Ready Decision
+**NOT READY** — BUG-001 (High) causes build failure. BUG-002 and BUG-003 (Medium) should also be fixed before deployment.
+
+Priority for fixes:
+1. BUG-001 (blocking — must fix before any deployment)
+2. BUG-002 (streak inconsistency — visible to all users with long streaks)
+3. BUG-003 (data integrity — allows retroactive stat inflation)
 
 ## Deployment
 _To be added by /deploy_
