@@ -24,7 +24,7 @@ export function MobilityWidget({ completedToday }: Props) {
       </div>
 
       <p className="text-sm text-zinc-400 mb-4">
-        {completedToday ? 'Heute erledigt — gut gemacht!' : '8 Übungen · ca. 8 Minuten · noch offen'}
+        {completedToday ? 'Heute erledigt — gut gemacht!' : '8 Übungen · ca. 4 Minuten · noch offen'}
       </p>
 
       {!completedToday && (
