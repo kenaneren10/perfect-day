@@ -1,8 +1,8 @@
 # PROJ-3: Übungsbibliothek (Kraft & Cardio)
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-06-22
-**Last Updated:** 2026-06-22
+**Last Updated:** 2026-06-23
 
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Datenbank, Auth, RLS-Policies
@@ -373,12 +373,12 @@ All data access goes through Server Actions (mutations) and direct Supabase clie
 
 ### Summary
 - **Acceptance Criteria Tested:** 31 total
-- **Passed:** 28
-- **Failed:** 3 (1 High, 2 Low)
+- **Passed:** 31 (all bugs fixed 2026-06-23)
+- **Failed:** 0
 - **Unit Tests:** 16 existing (all pass) — Server Actions fully covered
 - **E2E Tests:** Written in `tests/PROJ-3-uebungsbibliothek.spec.ts` — 4 unauthenticated redirect tests pass; authenticated tests skipped (require `TEST_USER_EMAIL`/`TEST_USER_PASSWORD`)
 - **Build:** Clean (`npm run build` passes, 0 TypeScript errors)
-- **Production-Ready:** **NO** — 1 High bug must be fixed
+- **Production-Ready:** **YES** — All 3 bugs fixed; 31/31 criteria pass
 
 ---
 
