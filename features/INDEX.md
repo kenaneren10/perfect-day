@@ -17,7 +17,7 @@
 |----|---------|--------|------|---------|
 | PROJ-1 | Supabase Infrastructure Setup | In Review | [spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-06-21 |
 | PROJ-2 | User Onboarding & Profil (Ziele, Level, Equipment) | Architected | [spec](PROJ-2-user-onboarding-profil.md) | 2026-06-21 |
-| PROJ-3 | Übungsbibliothek (Kraft & Cardio) | Planned | [spec](PROJ-3-uebungsbibliothek.md) | 2026-06-21 |
+| PROJ-3 | Übungsbibliothek (Kraft & Cardio) | In Review | [spec](PROJ-3-uebungsbibliothek.md) | 2026-06-21 |
 | PROJ-4 | Adaptiver Trainingsplan (regelbasiert) | Roadmap | — | 2026-06-21 |
 | PROJ-5 | Fortschritts-Tracking & Streaks | Roadmap | — | 2026-06-21 |
 | PROJ-6 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Roadmap | — | 2026-06-21 |
