@@ -1,6 +1,6 @@
 # PROJ-7: Mobility Routine
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -299,4 +299,15 @@ Keine Regressionen in PROJ-1–PROJ-6 gefunden (41 bestehende E2E-Tests bestehen
 **PRODUCTION READY** — Keine Critical- oder High-Bugs. Zwei Low-Findings (Spec-Korrektheit und Namens-Abweichung) sind nicht blockierend. Status: **Approved**.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-23
+**Production URL:** https://perfect-day-omega.vercel.app
+**Vercel Project:** kenaneren10s-projects/perfect-day
+**Deployment ID:** dpl_FwDVCfXWgDXxZHB51kTK9WjuH8EU
+
+### Deployment Checklist
+- ✅ `npm run build` grün (lokal + Vercel)
+- ✅ Security Headers konfiguriert (X-Frame-Options, HSTS, etc.)
+- ✅ Env-Vars gesetzt in Vercel (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)
+- ✅ GitHub Repo verknüpft (Auto-Deploy bei Push auf main)
+- ✅ `/mobility` Route live und erreichbar
