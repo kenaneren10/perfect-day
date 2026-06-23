@@ -61,6 +61,7 @@ export interface PlanExercise {
     description: string | null
     equipment: string
     muscle_groups: string[]
+    category: string
   }
 }
 

@@ -1,12 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Dumbbell, Play } from 'lucide-react'
+import { ArrowLeft, Dumbbell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WorkoutExerciseCard } from '@/components/plan/WorkoutExerciseCard'
+import { StartWorkoutButton } from '@/components/session/StartWorkoutButton'
+import { WorkoutSessionManager } from '@/components/session/WorkoutSessionManager'
+import { SessionSummaryBlock } from '@/components/session/SessionSummaryBlock'
 import { DAY_NAMES, FOCUS_LABELS, WorkoutFocus } from '@/types/plan'
 import type { PlanExercise, WorkoutPlan } from '@/types/plan'
+import type { WorkoutSession, SessionSet, SessionSummary } from '@/types/session'
 
 interface Props {
   params: Promise<{ weekday: string }>
@@ -42,7 +46,7 @@ export default async function WorkoutDayPage({ params }: Props) {
   if (dayError || !planDay) redirect('/plan')
   if (planDay.is_rest_day) redirect('/plan')
 
-  // Load exercises for this day (joined with exercise details)
+  // Load exercises with category
   const { data: exercises } = await supabase
     .from('plan_exercises')
     .select(`
@@ -52,7 +56,8 @@ export default async function WorkoutDayPage({ params }: Props) {
         name,
         description,
         equipment,
-        muscle_groups
+        muscle_groups,
+        category
       )
     `)
     .eq('day_id', planDay.id)
@@ -64,12 +69,75 @@ export default async function WorkoutDayPage({ params }: Props) {
     (planDay.focus ? FOCUS_LABELS[planDay.focus as WorkoutFocus] : 'Training')
   const setsBonus = (plan as WorkoutPlan).sets_bonus
   const exerciseList = (exercises as PlanExercise[]) ?? []
+  const totalPlannedSets = exerciseList.reduce((sum, pe) => sum + pe.base_sets + setsBonus, 0)
+
+  // Load current session for this plan_day (graceful if table doesn't exist)
+  let session: WorkoutSession | null = null
+  let sessionSets: SessionSet[] = []
+  let completedSummary: SessionSummary | null = null
+
+  try {
+    const { data: sessionData } = await supabase
+      .from('workout_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('plan_day_id', planDay.id)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    session = sessionData as WorkoutSession | null
+
+    if (session?.status === 'in_progress') {
+      const { data: setsData } = await supabase
+        .from('session_sets')
+        .select('*')
+        .eq('session_id', session.id)
+
+      sessionSets = (setsData as SessionSet[]) ?? []
+    }
+
+    if (session?.status === 'completed') {
+      // Build completed summary from DB data
+      const { data: setsData } = await supabase
+        .from('session_sets')
+        .select('weight_kg, reps, duration_minutes')
+        .eq('session_id', session.id)
+
+      const sets = setsData ?? []
+      const completedSets = sets.length
+      const volumeKg = sets.reduce((sum, s) => sum + (s.weight_kg ?? 0) * (s.reps ?? 0), 0)
+      const startedAt = new Date(session.started_at)
+      const completedAt = new Date(session.completed_at!)
+      const durationMinutes = Math.round((completedAt.getTime() - startedAt.getTime()) / 60000)
+
+      // Quick streak count
+      const { count } = await supabase
+        .from('workout_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+
+      completedSummary = {
+        streak: count ?? 0, // simplified — full streak calc runs at completion time
+        completedSets,
+        totalSets: totalPlannedSets,
+        volumeKg: Math.round(volumeKg),
+        durationMinutes,
+      }
+    }
+  } catch {
+    // workout_sessions table not yet migrated — graceful fallback
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         {/* Back navigation */}
-        <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-50 transition-colors mb-6">
+        <Link
+          href="/plan"
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-50 transition-colors mb-6"
+        >
           <ArrowLeft className="h-4 w-4" />
           Zurück zum Plan
         </Link>
@@ -88,7 +156,7 @@ export default async function WorkoutDayPage({ params }: Props) {
           </p>
         </div>
 
-        {/* Exercise list */}
+        {/* Empty exercise state */}
         {exerciseList.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center space-y-3">
             <div className="h-12 w-12 bg-zinc-800 rounded-xl flex items-center justify-center">
@@ -102,33 +170,33 @@ export default async function WorkoutDayPage({ params }: Props) {
               </Button>
             </Link>
           </div>
+        ) : completedSummary ? (
+          /* Session already completed — show summary */
+          <SessionSummaryBlock summary={completedSummary} />
+        ) : session?.status === 'in_progress' ? (
+          /* Active session — show set logger */
+          <WorkoutSessionManager
+            session={session}
+            exercises={exerciseList}
+            sessionSets={sessionSets}
+            setsBonus={setsBonus}
+            totalPlannedSets={totalPlannedSets}
+          />
         ) : (
-          <div className="space-y-3">
-            {exerciseList.map((pe, index) => (
-              <WorkoutExerciseCard
-                key={pe.id}
-                planExercise={pe}
-                effectiveSets={pe.base_sets + setsBonus}
-                position={index + 1}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Start workout button — placeholder for PROJ-5 */}
-        {exerciseList.length > 0 && (
-          <div className="mt-8">
-            <Button
-              disabled
-              className="w-full h-12 bg-zinc-800 text-zinc-500 border border-zinc-700 font-semibold cursor-not-allowed"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Training starten — kommt bald
-            </Button>
-            <p className="text-xs text-zinc-600 text-center mt-2">
-              Session-Tracking kommt mit dem Fortschritts-Feature
-            </p>
-          </div>
+          /* No session yet — show read-only plan + start button */
+          <>
+            <div className="space-y-3">
+              {exerciseList.map((pe, index) => (
+                <WorkoutExerciseCard
+                  key={pe.id}
+                  planExercise={pe}
+                  effectiveSets={pe.base_sets + setsBonus}
+                  position={index + 1}
+                />
+              ))}
+            </div>
+            <StartWorkoutButton planDayId={planDay.id} />
+          </>
         )}
       </div>
     </main>

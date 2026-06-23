@@ -3,6 +3,106 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Dumbbell, User, Calendar } from 'lucide-react'
+import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
+import type { ProgressStats } from '@/types/session'
+
+function getDayOfWeek(date: Date): number {
+  const d = date.getDay()
+  return d === 0 ? 7 : d
+}
+
+async function loadProgressStats(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<ProgressStats> {
+  const empty: ProgressStats = { currentStreak: 0, completedThisWeek: 0, plannedThisWeek: 0, totalCompleted: 0 }
+
+  try {
+    // Total completed sessions
+    const { count: total } = await supabase
+      .from('workout_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+
+    if (!total) return empty
+
+    // This week (Mon–Sun)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dow = getDayOfWeek(today)
+    const monday = new Date(today)
+    monday.setDate(today.getDate() - dow + 1)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+
+    const mondayStr = monday.toISOString().split('T')[0]
+    const sundayStr = sunday.toISOString().split('T')[0]
+
+    const { count: thisWeek } = await supabase
+      .from('workout_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .gte('completed_at', `${mondayStr}T00:00:00`)
+      .lte('completed_at', `${sundayStr}T23:59:59`)
+
+    // Planned training days this week (from workout plan)
+    const { data: plan } = await supabase
+      .from('workout_plans')
+      .select('id, training_days_per_week')
+      .eq('user_id', userId)
+      .single()
+
+    const plannedThisWeek = plan?.training_days_per_week ?? 0
+
+    // Streak: count of last completed sessions with no gaps on training days
+    // Simplified version: consecutive days going backward from yesterday
+    let streak = 0
+    const { data: allSessions } = await supabase
+      .from('workout_sessions')
+      .select('completed_at')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+
+    if (plan) {
+      const { data: planDays } = await supabase
+        .from('plan_days')
+        .select('day_of_week')
+        .eq('plan_id', plan.id)
+        .eq('is_rest_day', false)
+
+      const trainingWeekdays = new Set((planDays ?? []).map((d: { day_of_week: number }) => d.day_of_week))
+      const completedDates = new Set(
+        (allSessions ?? []).map((s: { completed_at: string }) => s.completed_at.split('T')[0]),
+      )
+
+      const todayStr = today.toISOString().split('T')[0]
+      const todayDow = getDayOfWeek(today)
+      if (trainingWeekdays.has(todayDow) && completedDates.has(todayStr)) streak++
+
+      for (let daysBack = 1; daysBack <= 365; daysBack++) {
+        const d = new Date(today)
+        d.setDate(d.getDate() - daysBack)
+        const dateStr = d.toISOString().split('T')[0]
+        const weekday = getDayOfWeek(d)
+        if (!trainingWeekdays.has(weekday)) continue
+        if (completedDates.has(dateStr)) streak++
+        else break
+      }
+    }
+
+    return {
+      currentStreak: streak,
+      completedThisWeek: thisWeek ?? 0,
+      plannedThisWeek,
+      totalCompleted: total,
+    }
+  } catch {
+    return empty
+  }
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -16,6 +116,7 @@ export default async function DashboardPage() {
     .single()
 
   const firstName = profile?.display_name?.split(' ')[0] ?? 'du'
+  const stats = await loadProgressStats(supabase, user.id)
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
@@ -33,6 +134,11 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
+        {/* Progress stats (PROJ-5) */}
+        <div className="mb-4">
+          <ProgressStatsWidget stats={stats} />
+        </div>
+
         {/* Quick Links */}
         <div className="space-y-4">
           <Link href="/exercises">
@@ -44,12 +150,11 @@ export default async function DashboardPage() {
                 <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
                   Übungsbibliothek
                 </p>
-                <p className="text-sm text-zinc-400">Kraft- & Cardio-Übungen entdecken</p>
+                <p className="text-sm text-zinc-400">Kraft- &amp; Cardio-Übungen entdecken</p>
               </div>
             </div>
           </Link>
 
-          {/* Trainingsplan */}
           <Link href="/plan">
             <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 flex items-center gap-4 transition-colors cursor-pointer group">
               <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center shrink-0">
@@ -63,17 +168,6 @@ export default async function DashboardPage() {
               </div>
             </div>
           </Link>
-
-          {/* Coming soon placeholder */}
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-5 flex items-center gap-4 opacity-50">
-            <div className="h-12 w-12 bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-              <span className="text-xl">🔒</span>
-            </div>
-            <div>
-              <p className="font-semibold text-zinc-400">Fortschritt & Streaks</p>
-              <p className="text-sm text-zinc-600">Deine Trainingshistorie & Erfolge — kommt bald</p>
-            </div>
-          </div>
         </div>
       </div>
     </main>

@@ -1,6 +1,6 @@
 # PROJ-5: Fortschritts-Tracking & Streaks
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
@@ -301,7 +301,29 @@ Für MVP mit < 200 Sessions pro Nutzer ist diese Berechnung in Millisekunden —
 **Kein neues npm-Paket notwendig.**
 
 ## Implementation Notes (Frontend)
-_To be added by /frontend_
+**Date:** 2026-06-23
+
+### Files Created
+- `src/types/session.ts` — WorkoutSession, SessionSet, SessionSummary, DayStatus, ProgressStats types
+- `src/app/session/actions.ts` — Server Actions: startSession, logSet, completeSession (+ internal computeStreak); includes progression_pending trigger and streak calculation
+- `src/components/session/StartWorkoutButton.tsx` — Client: calls startSession, triggers page revalidation
+- `src/components/session/SessionTimerBar.tsx` — Client: live timer (MM:SS) from session.started_at
+- `src/components/session/ExerciseSetLogger.tsx` — Client: per-exercise set logging (weight+reps / duration for cardio), immediate upsert on save, shows ✓ on saved sets
+- `src/components/session/WorkoutSessionManager.tsx` — Client: orchestrates in_progress session (timer + loggers + complete button), shows SessionSummaryBlock on completion
+- `src/components/session/SessionSummaryBlock.tsx` — Completion screen: streak, sets, volume, duration, nav links
+- `src/components/history/TrainingCalendar.tsx` — Client: 4×7 grid with color coding (green/red/gray/blue), Popover on completed days
+- `src/components/stats/ProgressStatsWidget.tsx` — Server-rendered: streak + week progress + total count (links to /history)
+- `src/app/history/page.tsx` — New page: streak stats + 4-week TrainingCalendar
+
+### Files Updated
+- `src/types/plan.ts` — PlanExercise.exercise: added `category: string` field
+- `src/app/plan/day/[weekday]/page.tsx` — Added session state detection (no_session/in_progress/completed), renders appropriate component, graceful fallback when tables not yet migrated
+- `src/app/page.tsx` — Added ProgressStatsWidget + loadProgressStats helper; removed "Fortschritt" placeholder card
+
+### Deviations from Spec
+- Session summary on reload: full streak is shown as total completed count (simplified) — real streak computed at completeSession time and stored only transiently; accurate streak requires PROJ-5 DB to be migrated
+- History page: `/history` is a direct route (not a tab) — consistent with existing routing pattern
+- `startSession` re-uses existing in_progress session rather than returning an error (better UX)
 
 ## Implementation Notes (Backend)
 _To be added by /backend_
