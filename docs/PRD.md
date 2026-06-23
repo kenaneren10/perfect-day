@@ -19,7 +19,7 @@ Perfect Day ist eine Web-App für Privatnutzer aller Fitnesslevel, die einen reg
 | P0 (MVP) | Übungsbibliothek | Planned |
 | P0 (MVP) | Adaptiver Trainingsplan | Planned |
 | P0 (MVP) | Fortschritts-Tracking & Streaks | Planned |
-| P1 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Roadmap |
+| P1 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Planned |
 | P1 | Mobility Routine | Roadmap |
 
 ## Success Metrics
