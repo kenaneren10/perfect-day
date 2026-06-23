@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Dumbbell, User, Calendar } from 'lucide-react'
 import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
+import { CalorieWidget } from '@/components/nutrition/CalorieWidget'
 import { calculateStreak, toDayOfWeek } from '@/lib/session/streak'
 import type { ProgressStats } from '@/types/session'
 
@@ -100,6 +101,29 @@ export default async function DashboardPage() {
   const firstName = profile?.display_name?.split(' ')[0] ?? 'du'
   const stats = await loadProgressStats(supabase, user.id)
 
+  // Calorie widget: only if user has set up a calorie goal
+  const { data: nutritionProfile } = await supabase
+    .from('profiles')
+    .select('calorie_goal')
+    .eq('id', user.id)
+    .single()
+  const calorieGoal: number | null = nutritionProfile?.calorie_goal ?? null
+
+  let consumedKcal = 0
+  if (calorieGoal) {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0]
+      const { data: entries } = await supabase
+        .from('food_diary_entries')
+        .select('kcal')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+      consumedKcal = (entries ?? []).reduce((s: number, e: { kcal: number }) => s + e.kcal, 0)
+    } catch {
+      // table not yet migrated
+    }
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
@@ -120,6 +144,13 @@ export default async function DashboardPage() {
         <div className="mb-4">
           <ProgressStatsWidget stats={stats} />
         </div>
+
+        {/* Calorie widget (PROJ-6) — only shown when goal is configured */}
+        {calorieGoal && (
+          <div className="mb-4">
+            <CalorieWidget consumed={consumedKcal} goal={calorieGoal} />
+          </div>
+        )}
 
         {/* Quick Links */}
         <div className="space-y-4">

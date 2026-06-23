@@ -1,6 +1,6 @@
 # PROJ-6: Kalorienrechner mit Food-Tracking & Barcode Scanner
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-23
 **Last Updated:** 2026-06-23
 
