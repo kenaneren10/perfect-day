@@ -1,8 +1,8 @@
 # PROJ-2: User Onboarding & Profil (Ziele, Level, Equipment)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-22
-**Last Updated:** 2026-06-22
+**Last Updated:** 2026-06-23
 
 ## Dependencies
 - Requires: PROJ-1 (Supabase Infrastructure Setup) — Auth, profiles-Tabelle, RLS-Policies
@@ -300,6 +300,31 @@ ProfilePage (Server Component — lädt aktuelles Profil aus DB)
 | `src/lib/supabase/server.ts` | Server-seitige Profil-Reads in Server Components |
 
 **Kein neues Paket notwendig.**
+
+## Implementation Notes (Frontend)
+**Date:** 2026-06-23
+
+### Files Created
+- `src/types/profile.ts` — Profile, Goal, OnboardingFormData types + label maps
+- `src/proxy.ts` — Extended middleware with full redirect logic (login, onboarding, dashboard)
+- `src/app/login/page.tsx` — Login page (Server Component, redirects logged-in users)
+- `src/components/auth/LoginForm.tsx` — Email/password + Google OAuth + conditional Apple OAuth
+- `src/app/register/page.tsx` — Register page (Server Component)
+- `src/components/auth/RegisterForm.tsx` — Email/password registration, stores email in sessionStorage on success
+- `src/app/auth/confirm-pending/page.tsx` — Email confirmation hint page (static)
+- `src/components/auth/ResendButton.tsx` — Resend confirmation email, reads email from sessionStorage
+- `src/app/onboarding/actions.ts` — Server Action: `completeOnboarding` (updates profiles + user_metadata)
+- `src/app/onboarding/page.tsx` — Onboarding page (Server Component, reads OAuth display_name)
+- `src/components/onboarding/OnboardingFlow.tsx` — 4-step multi-step flow (Name→Goal→Level→Equipment), in-memory state
+- `src/app/profile/actions.ts` — Server Action: `updateProfile`
+- `src/app/profile/page.tsx` — Profile page with Avatar + ProfileForm
+- `src/components/profile/ProfileForm.tsx` — Editable profile form with selection rows, sign-out button
+- `src/app/page.tsx` — Dashboard placeholder with greeting + exercise library link + coming-soon cards
+
+### Deviations from Spec
+- **Apple OAuth check**: Uses `NEXT_PUBLIC_APPLE_OAUTH_ENABLED=true` env var to conditionally render Apple button. Set this variable when Apple OAuth is configured in Supabase.
+- **ResendButton email input**: If `pendingEmail` sessionStorage key is missing (user navigated directly), a manual email input is shown so the user can still request a resend.
+- **SelectionCard reuse**: `SelectionRow` (compact) variant used in ProfileForm; `SelectionCard` (full with description) in OnboardingFlow — same visual pattern, sized differently for context.
 
 ## QA Test Results
 _To be added by /qa_

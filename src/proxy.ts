@@ -8,6 +8,14 @@ function applySecurityHeaders(response: NextResponse): void {
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
 }
 
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname.startsWith('/auth/')
+  )
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -42,7 +50,31 @@ export async function proxy(request: NextRequest) {
   )
 
   // Refresh session — keeps auth tokens valid without logging users out
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
+
+  if (!isPublicPath(pathname)) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    const onboardingDone = user.user_metadata?.onboarding_completed === true
+
+    if (!onboardingDone && pathname !== '/onboarding') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+
+    if (onboardingDone && pathname === '/onboarding') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
 
   applySecurityHeaders(supabaseResponse)
   return supabaseResponse
