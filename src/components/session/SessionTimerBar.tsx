@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Clock } from 'lucide-react'
+import { Timer } from 'lucide-react'
 
 interface Props {
   startedAt: string
@@ -23,14 +23,14 @@ export function SessionTimerBar({ startedAt }: Props) {
   const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 
   return (
-    <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 mb-6">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800/60 rounded-2xl px-5 py-3.5 mb-6 card-shadow">
+      <div className="flex items-center gap-2.5">
         <span className="h-2 w-2 bg-green-400 rounded-full animate-pulse block" />
-        <span className="text-sm font-medium text-green-400">Training läuft</span>
+        <span className="text-sm font-semibold text-zinc-300">Training läuft</span>
       </div>
-      <div className="flex items-center gap-1.5 text-green-400">
-        <Clock className="h-4 w-4" />
-        <span className="font-mono font-semibold text-sm">{display}</span>
+      <div className="flex items-center gap-2 bg-zinc-800 rounded-full px-3 py-1.5">
+        <Timer className="h-3.5 w-3.5 text-zinc-400" />
+        <span className="font-mono font-bold text-sm text-zinc-50 tabular-nums">{display}</span>
       </div>
     </div>
   )

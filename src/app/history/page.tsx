@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Flame, Dumbbell } from 'lucide-react'
+import { Flame, Dumbbell } from 'lucide-react'
 import { TrainingCalendar } from '@/components/history/TrainingCalendar'
 import { calculateStreak } from '@/lib/session/streak'
 import type { DayStatus } from '@/types/session'
@@ -167,46 +167,34 @@ export default async function HistoryPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-8">
         {/* Back */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-50 transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Dashboard
-        </Link>
-
-        <h1 className="text-2xl font-bold text-zinc-50 mb-6">Trainingshistorie</h1>
+        <h1 className="text-3xl font-black text-zinc-50 mb-6">Verlauf</h1>
 
         {/* Summary stats */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
-            <div className="h-10 w-10 bg-orange-500/10 rounded-lg flex items-center justify-center shrink-0">
-              <Flame className="h-5 w-5 text-orange-400" />
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-zinc-900 border border-zinc-800/60 rounded-2xl p-5 card-shadow">
+            <div className="flex items-center gap-2 mb-1">
+              <Flame className="h-4 w-4 text-amber-400" />
+              <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Streak</p>
             </div>
-            <div>
-              <p className="text-xl font-bold text-zinc-50">{currentStreak}</p>
-              <p className="text-xs text-zinc-400">
-                {currentStreak === 1 ? 'Tag Streak' : 'Tage Streak'}
-              </p>
-            </div>
+            <p className="text-4xl font-black text-zinc-50 tabular-nums">{currentStreak}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Tage</p>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
-            <div className="h-10 w-10 bg-green-500/10 rounded-lg flex items-center justify-center shrink-0">
-              <Dumbbell className="h-5 w-5 text-green-400" />
+          <div className="bg-zinc-900 border border-zinc-800/60 rounded-2xl p-5 card-shadow">
+            <div className="flex items-center gap-2 mb-1">
+              <Dumbbell className="h-4 w-4 text-zinc-500" />
+              <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Gesamt</p>
             </div>
-            <div>
-              <p className="text-xl font-bold text-zinc-50">{totalCompleted}</p>
-              <p className="text-xs text-zinc-400">Einheiten gesamt</p>
-            </div>
+            <p className="text-4xl font-black text-zinc-50 tabular-nums">{totalCompleted}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Einheiten</p>
           </div>
         </div>
 
         {/* Calendar */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-sm font-medium text-zinc-400 mb-4">Letzte 4 Wochen</p>
+        <div className="bg-zinc-900 border border-zinc-800/60 rounded-2xl p-5 card-shadow">
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">Letzte 4 Wochen</p>
           <TrainingCalendar days={days} sessionDetails={sessionDetails} />
         </div>
 

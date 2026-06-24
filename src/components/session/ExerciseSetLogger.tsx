@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, Circle } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { logSet } from '@/app/session/actions'
@@ -78,19 +78,19 @@ export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, exis
   const savedCount = sets.filter((s) => s.saved).length
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+    <div className="bg-zinc-900 border border-zinc-800/60 rounded-2xl p-4 card-shadow">
       {/* Exercise header */}
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="font-semibold text-zinc-50">{planExercise.exercise.name}</h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-zinc-500 mt-0.5">
             {isCardio
               ? `${effectiveSets} Runden`
               : `${effectiveSets} Sätze · ${planExercise.reps_min}–${planExercise.reps_max} Wdh`}
           </p>
         </div>
-        <span className="text-xs text-zinc-500 mt-1">
-          {savedCount}/{effectiveSets} ✓
+        <span className="text-xs text-zinc-600 font-medium mt-0.5 tabular-nums">
+          {savedCount}/{effectiveSets}
         </span>
       </div>
 
@@ -99,28 +99,25 @@ export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, exis
         {sets.map((set, index) => (
           <div
             key={index}
-            className={`flex items-center gap-2 rounded-lg p-2 transition-colors ${
-              set.saved ? 'bg-green-500/5 border border-green-500/20' : 'bg-zinc-800/50'
+            className={`flex items-center gap-2.5 rounded-xl p-2.5 transition-colors ${
+              set.saved ? 'bg-green-500/8 border border-green-500/20' : 'bg-zinc-800/50'
             }`}
           >
-            {/* Set number */}
-            <span className="text-xs text-zinc-500 w-5 shrink-0 text-center font-mono">
+            <span className="text-xs text-zinc-600 w-5 shrink-0 text-center font-mono font-bold">
               {index + 1}
             </span>
 
             {isCardio ? (
-              /* Cardio: duration only */
               <Input
                 type="number"
                 placeholder="Min"
                 value={set.durationMinutes}
                 onChange={(e) => update(index, { durationMinutes: e.target.value })}
                 disabled={set.saved || set.saving}
-                className="h-8 text-sm bg-zinc-900 border-zinc-700 focus:border-green-500 text-zinc-50 w-24"
+                className="h-8 text-sm bg-zinc-900 border-zinc-700 focus:border-green-500 text-zinc-50 w-24 rounded-xl"
                 min={0}
               />
             ) : (
-              /* Strength: weight + reps */
               <>
                 <Input
                   type="number"
@@ -128,24 +125,23 @@ export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, exis
                   value={set.weightKg}
                   onChange={(e) => update(index, { weightKg: e.target.value })}
                   disabled={set.saved || set.saving}
-                  className="h-8 text-sm bg-zinc-900 border-zinc-700 focus:border-green-500 text-zinc-50 w-20"
+                  className="h-8 text-sm bg-zinc-900 border-zinc-700 focus:border-green-500 text-zinc-50 w-20 rounded-xl"
                   min={0}
                   step={0.5}
                 />
-                <span className="text-zinc-600 text-xs">×</span>
+                <span className="text-zinc-700 text-xs font-medium">×</span>
                 <Input
                   type="number"
                   placeholder="Wdh"
                   value={set.reps}
                   onChange={(e) => update(index, { reps: e.target.value })}
                   disabled={set.saved || set.saving}
-                  className="h-8 text-sm bg-zinc-900 border-zinc-700 focus:border-green-500 text-zinc-50 w-20"
+                  className="h-8 text-sm bg-zinc-900 border-zinc-700 focus:border-green-500 text-zinc-50 w-20 rounded-xl"
                   min={1}
                 />
               </>
             )}
 
-            {/* Save / Done indicator */}
             <div className="ml-auto shrink-0">
               {set.saved ? (
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -154,7 +150,7 @@ export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, exis
                   size="sm"
                   onClick={() => handleSave(index)}
                   disabled={set.saving}
-                  className="h-7 px-2.5 text-xs bg-green-500 hover:bg-green-400 text-black font-semibold"
+                  className="h-7 px-3 text-xs bg-green-500 hover:bg-green-400 text-black font-bold rounded-full"
                 >
                   {set.saving ? '…' : '✓'}
                 </Button>

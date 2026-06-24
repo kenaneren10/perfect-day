@@ -27,7 +27,7 @@ export function StartWorkoutButton({ planDayId }: Props) {
       <Button
         onClick={handleStart}
         disabled={isPending}
-        className="w-full h-12 bg-green-500 hover:bg-green-400 text-black font-semibold text-base"
+        className="w-full h-12 bg-green-500 hover:bg-green-400 text-black font-bold text-base rounded-full"
       >
         <Play className="h-5 w-5 mr-2" />
         {isPending ? 'Wird gestartet…' : 'Training starten'}

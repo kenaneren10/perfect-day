@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Flame, Target, TrendingUp } from 'lucide-react'
+import { Flame } from 'lucide-react'
 import type { ProgressStats } from '@/types/session'
 
 interface Props {
@@ -12,17 +12,15 @@ export function ProgressStatsWidget({ stats }: Props) {
   if (totalCompleted === 0) {
     return (
       <Link href="/plan">
-        <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 transition-colors cursor-pointer group">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 bg-orange-500/10 rounded-xl flex items-center justify-center shrink-0">
-              <Flame className="h-6 w-6 text-orange-400" />
-            </div>
-            <div>
-              <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
-                Starte dein erstes Training
-              </p>
-              <p className="text-sm text-zinc-400">Öffne deinen Trainingsplan und leg los!</p>
-            </div>
+        <div className="bg-zinc-900 rounded-2xl p-5 card-shadow border border-zinc-800/60 flex items-center gap-4 group hover:border-zinc-700 transition-all">
+          <div className="h-11 w-11 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0">
+            <Flame className="h-5 w-5 text-amber-400" />
+          </div>
+          <div>
+            <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
+              Starte dein erstes Training
+            </p>
+            <p className="text-sm text-zinc-500 mt-0.5">Öffne deinen Plan und leg los</p>
           </div>
         </div>
       </Link>
@@ -31,45 +29,30 @@ export function ProgressStatsWidget({ stats }: Props) {
 
   return (
     <Link href="/history">
-      <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 transition-colors cursor-pointer group">
-        <div className="flex items-center justify-between mb-4">
-          <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
-            Fortschritt
-          </p>
-          <TrendingUp className="h-4 w-4 text-zinc-500 group-hover:text-green-400 transition-colors" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
+      <div className="bg-zinc-900 rounded-2xl p-5 card-shadow border border-zinc-800/60 group hover:border-zinc-700 transition-all">
+        <div className="grid grid-cols-3 divide-x divide-zinc-800">
           {/* Streak */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Flame className="h-4 w-4 text-orange-400" />
+          <div className="flex flex-col items-center gap-1 pr-4">
+            <div className="flex items-center gap-1.5">
+              <Flame className="h-4 w-4 text-amber-400" />
+              <span className="text-4xl font-black text-zinc-50 tabular-nums leading-none">{currentStreak}</span>
             </div>
-            <p className="text-2xl font-bold text-zinc-50">{currentStreak}</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              {currentStreak === 1 ? 'Tag Streak' : 'Tage Streak'}
-            </p>
+            <p className="text-xs text-zinc-500">Tage Streak</p>
           </div>
 
           {/* This week */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Target className="h-4 w-4 text-blue-400" />
-            </div>
-            <p className="text-2xl font-bold text-zinc-50">
+          <div className="flex flex-col items-center gap-1 px-4">
+            <span className="text-4xl font-black text-zinc-50 tabular-nums leading-none">
               {completedThisWeek}
-              <span className="text-base text-zinc-500 font-normal">/{plannedThisWeek}</span>
-            </p>
-            <p className="text-xs text-zinc-500 mt-0.5">diese Woche</p>
+              <span className="text-xl text-zinc-600 font-medium">/{plannedThisWeek}</span>
+            </span>
+            <p className="text-xs text-zinc-500">Diese Woche</p>
           </div>
 
           {/* Total */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <span className="text-sm">🏋️</span>
-            </div>
-            <p className="text-2xl font-bold text-zinc-50">{totalCompleted}</p>
-            <p className="text-xs text-zinc-500 mt-0.5">gesamt</p>
+          <div className="flex flex-col items-center gap-1 pl-4">
+            <span className="text-4xl font-black text-zinc-50 tabular-nums leading-none">{totalCompleted}</span>
+            <p className="text-xs text-zinc-500">Gesamt</p>
           </div>
         </div>
       </div>

@@ -232,34 +232,36 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-4">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-8 space-y-5">
         {/* Header */}
-        <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-zinc-500 text-sm">{greeting},</p>
-            <h1 className="text-3xl font-bold text-zinc-50">{firstName}</h1>
-            <p className="text-sm text-zinc-400 mt-1">{motivationLine}</p>
+            <p className="text-zinc-500 text-sm font-medium">{greeting}</p>
+            <h1 className="text-3xl font-black text-zinc-50 mt-0.5">{firstName}</h1>
+            <p className="text-sm text-zinc-400 mt-1.5 leading-snug max-w-xs">{motivationLine}</p>
           </div>
           <Link href="/profile">
-            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 mt-1">
+            <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-full mt-1">
               <User className="h-5 w-5" />
             </Button>
           </Link>
         </div>
 
-        {/* Today Hero Card (QW-1) */}
+        {/* Today Hero Card */}
         <TodayHeroCard {...todayStatus} />
 
         {/* Progress stats */}
         <ProgressStatsWidget stats={stats} />
 
-        {/* Calorie widget — only when goal is configured */}
-        {calorieGoal && (
-          <CalorieWidget consumed={consumedKcal} goal={calorieGoal} />
+        {/* Secondary widgets side by side when both visible, stacked otherwise */}
+        {calorieGoal ? (
+          <div className="space-y-3">
+            <CalorieWidget consumed={consumedKcal} goal={calorieGoal} />
+            <MobilityWidget completedToday={mobilityCompletedToday} />
+          </div>
+        ) : (
+          <MobilityWidget completedToday={mobilityCompletedToday} />
         )}
-
-        {/* Mobility widget */}
-        <MobilityWidget completedToday={mobilityCompletedToday} />
       </div>
     </main>
   )

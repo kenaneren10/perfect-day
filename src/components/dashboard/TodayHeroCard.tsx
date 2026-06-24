@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Dumbbell, Moon, CheckCircle2, ChevronRight, Zap } from 'lucide-react'
-import type { WorkoutFocus } from '@/types/plan'
 
 interface TodayHeroCardProps {
   isTrainingDay: boolean
@@ -18,14 +17,6 @@ const REST_TIPS = [
   'Heute regenerierst du — morgen bist du stärker.',
 ]
 
-const FOCUS_ACCENT: Record<WorkoutFocus, string> = {
-  full_body: 'border-green-500/50',
-  upper_body: 'border-blue-500/50',
-  lower_body: 'border-violet-500/50',
-  cardio: 'border-orange-500/50',
-  core: 'border-yellow-500/50',
-}
-
 function getTip(): string {
   return REST_TIPS[new Date().getDate() % REST_TIPS.length]
 }
@@ -38,57 +29,59 @@ export function TodayHeroCard({
   sessionCompleted,
   sessionInProgress,
 }: TodayHeroCardProps) {
-  // No plan or rest day
+  // Rest day
   if (!isTrainingDay) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="h-10 w-10 bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+      <div className="bg-zinc-900 rounded-3xl p-6 card-shadow border border-zinc-800/60">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-11 w-11 bg-zinc-800 rounded-2xl flex items-center justify-center shrink-0">
             <Moon className="h-5 w-5 text-zinc-500" />
           </div>
           <div>
-            <p className="font-semibold text-zinc-50">Ruhetag</p>
-            <p className="text-xs text-zinc-500">Erhol dich — das gehört zum Plan.</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-0.5">Heute</p>
+            <p className="font-bold text-lg text-zinc-50">Ruhetag</p>
           </div>
         </div>
-        <p className="text-sm text-zinc-400 border-l-2 border-zinc-700 pl-3 italic">{getTip()}</p>
+        <p className="text-sm text-zinc-400 leading-relaxed border-l-2 border-zinc-700 pl-3">{getTip()}</p>
       </div>
     )
   }
 
-  // Session already done today
+  // Completed
   if (sessionCompleted) {
     return (
-      <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-6">
+      <div className="bg-zinc-900 rounded-3xl p-6 glow-green border border-green-500/20">
+        <p className="text-xs text-green-500 uppercase tracking-widest font-medium mb-3">Heute</p>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-green-500/20 rounded-xl flex items-center justify-center shrink-0">
+          <div className="h-11 w-11 bg-green-500/15 rounded-2xl flex items-center justify-center shrink-0">
             <CheckCircle2 className="h-5 w-5 text-green-400" />
           </div>
           <div>
-            <p className="font-bold text-zinc-50">Heute erledigt</p>
-            <p className="text-xs text-green-400/80 mt-0.5">{focusLabel} · Starke Leistung!</p>
+            <p className="font-black text-2xl text-zinc-50 leading-tight">{focusLabel}</p>
+            <p className="text-sm text-green-400/80 mt-0.5">Erledigt — starke Leistung!</p>
           </div>
         </div>
       </div>
     )
   }
 
-  // Session active (in progress)
+  // In progress
   if (sessionInProgress) {
     return (
       <Link href={`/plan/day/${planDayOfWeek}`}>
-        <div className="bg-green-500/10 border border-green-500/40 rounded-2xl p-6 cursor-pointer group">
+        <div className="bg-zinc-900 rounded-3xl p-6 glow-green border border-green-500/30 cursor-pointer group">
+          <p className="text-xs text-green-500 uppercase tracking-widest font-medium mb-3">Läuft gerade</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="h-10 w-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                <div className="h-11 w-11 bg-green-500/15 rounded-2xl flex items-center justify-center">
                   <Zap className="h-5 w-5 text-green-400" />
                 </div>
                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-green-400 rounded-full animate-pulse block" />
               </div>
               <div>
-                <p className="font-bold text-zinc-50">Training läuft</p>
-                <p className="text-xs text-green-400/80 mt-0.5">{focusLabel} · Weitermachen</p>
+                <p className="font-black text-2xl text-zinc-50 leading-tight">{focusLabel}</p>
+                <p className="text-sm text-zinc-400 mt-0.5">Training fortsetzen</p>
               </div>
             </div>
             <ChevronRight className="h-5 w-5 text-green-400 group-hover:translate-x-0.5 transition-transform" />
@@ -98,23 +91,22 @@ export function TodayHeroCard({
     )
   }
 
-  // Ready to start — primary CTA
+  // Ready to start — dominant hero
   return (
     <Link href={`/plan/day/${planDayOfWeek}`}>
-      <div className={`bg-zinc-900 border ${FOCUS_ACCENT['full_body']} rounded-2xl p-6 cursor-pointer group hover:bg-zinc-800/80 transition-all`}>
-        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Heute auf dem Plan</p>
-        <h2 className="text-2xl font-bold text-zinc-50 mb-1">{focusLabel}</h2>
+      <div className="bg-zinc-900 rounded-3xl p-6 card-shadow-lg border border-zinc-800/60 cursor-pointer group hover:border-zinc-700 transition-all">
+        <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">Heute auf dem Plan</p>
+
+        <p className="font-black text-4xl text-zinc-50 leading-none mb-1">{focusLabel}</p>
         {exerciseCount !== undefined && (
-          <p className="text-sm text-zinc-400 mb-5">
-            {exerciseCount} {exerciseCount === 1 ? 'Übung' : 'Übungen'} · Bereit wenn du es bist
+          <p className="text-sm text-zinc-500 mb-6">
+            {exerciseCount} {exerciseCount === 1 ? 'Übung' : 'Übungen'}
           </p>
         )}
-        <div className="flex items-center justify-between bg-green-500 group-hover:bg-green-400 rounded-xl px-4 py-3 transition-colors">
-          <div className="flex items-center gap-2">
-            <Dumbbell className="h-4 w-4 text-black" />
-            <span className="font-bold text-black text-sm">Jetzt starten</span>
-          </div>
-          <ChevronRight className="h-4 w-4 text-black group-hover:translate-x-0.5 transition-transform" />
+
+        <div className="flex items-center justify-center gap-2 bg-green-500 group-hover:bg-green-400 rounded-full py-3.5 px-6 transition-colors">
+          <Dumbbell className="h-4 w-4 text-black" />
+          <span className="font-bold text-black text-sm tracking-wide">Jetzt starten</span>
         </div>
       </div>
     </Link>

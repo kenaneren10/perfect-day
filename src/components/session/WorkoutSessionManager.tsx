@@ -85,13 +85,13 @@ export function WorkoutSessionManager({
       <Button
         onClick={handleComplete}
         disabled={isPending}
-        className="w-full h-12 bg-green-500 hover:bg-green-400 text-black font-semibold text-base"
+        className="w-full h-13 bg-green-500 hover:bg-green-400 text-black font-bold text-base rounded-full"
       >
         <CheckSquare className="h-5 w-5 mr-2" />
         {isPending ? 'Wird gespeichert…' : 'Einheit abschließen'}
       </Button>
 
-      <p className="text-xs text-zinc-600 text-center mt-2">
+      <p className="text-xs text-zinc-600 text-center mt-3">
         Auch ohne alle Sätze kannst du die Einheit abschließen.
       </p>
     </div>

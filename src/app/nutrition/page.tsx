@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Settings } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NutritionDiary } from '@/components/nutrition/NutritionDiary'
 import { deriveMacroTargets } from '@/lib/nutrition/tdee'
@@ -47,28 +47,20 @@ export default async function NutritionPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-50 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Dashboard
-          </Link>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-black text-zinc-50">Ernährung</h1>
           <Link href="/nutrition/setup">
             <Button
               variant="ghost"
               size="icon"
-              className="text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800"
+              className="text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-full"
               title="Einstellungen"
             >
               <Settings className="h-5 w-5" />
             </Button>
           </Link>
         </div>
-
-        <h1 className="text-2xl font-bold text-zinc-50 mb-6">Ernährung heute</h1>
 
         {!calorieGoal ? (
           <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-8 text-center space-y-4">

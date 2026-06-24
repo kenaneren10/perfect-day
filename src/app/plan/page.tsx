@@ -42,15 +42,12 @@ export default async function PlanPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-10 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-zinc-400 text-sm">Hey {firstName},</p>
-            <h1 className="text-2xl font-bold text-zinc-50">Dein Trainingsplan</h1>
-          </div>
+          <h1 className="text-3xl font-black text-zinc-50">Training</h1>
           <Link href="/profile">
-            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800">
+            <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-zinc-50 hover:bg-zinc-800 rounded-full">
               <User className="h-5 w-5" />
             </Button>
           </Link>
