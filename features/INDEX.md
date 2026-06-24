@@ -16,11 +16,11 @@
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | PROJ-1 | Supabase Infrastructure Setup | In Review | [spec](PROJ-1-supabase-infrastructure-setup.md) | 2026-06-21 |
-| PROJ-2 | User Onboarding & Profil (Ziele, Level, Equipment) | Approved | [spec](PROJ-2-user-onboarding-profil.md) | 2026-06-21 |
-| PROJ-3 | Übungsbibliothek (Kraft & Cardio) | Approved | [spec](PROJ-3-uebungsbibliothek.md) | 2026-06-21 |
-| PROJ-4 | Adaptiver Trainingsplan (regelbasiert) | Approved | [spec](PROJ-4-adaptiver-trainingsplan.md) | 2026-06-21 |
-| PROJ-5 | Fortschritts-Tracking & Streaks | Approved | [spec](PROJ-5-fortschritts-tracking-streaks.md) | 2026-06-21 |
-| PROJ-6 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Approved | [spec](PROJ-6-kalorienrechner-food-tracking.md) | 2026-06-21 |
+| PROJ-2 | User Onboarding & Profil (Ziele, Level, Equipment) | Deployed | [spec](PROJ-2-user-onboarding-profil.md) | 2026-06-21 |
+| PROJ-3 | Übungsbibliothek (Kraft & Cardio) | Deployed | [spec](PROJ-3-uebungsbibliothek.md) | 2026-06-21 |
+| PROJ-4 | Adaptiver Trainingsplan (regelbasiert) | Deployed | [spec](PROJ-4-adaptiver-trainingsplan.md) | 2026-06-21 |
+| PROJ-5 | Fortschritts-Tracking & Streaks | Deployed | [spec](PROJ-5-fortschritts-tracking-streaks.md) | 2026-06-21 |
+| PROJ-6 | Kalorienrechner mit Food-Tracking & Barcode Scanner | Deployed | [spec](PROJ-6-kalorienrechner-food-tracking.md) | 2026-06-21 |
 | PROJ-7 | Mobility Routine | Deployed | [spec](PROJ-7-mobility-routine.md) | 2026-06-21 |
 
 <!-- Add features above this line -->
