@@ -2,12 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Dumbbell, User, Calendar, Flame } from 'lucide-react'
+import { User } from 'lucide-react'
 import { ProgressStatsWidget } from '@/components/stats/ProgressStatsWidget'
 import { CalorieWidget } from '@/components/nutrition/CalorieWidget'
 import { MobilityWidget } from '@/components/mobility/MobilityWidget'
+import { TodayHeroCard } from '@/components/dashboard/TodayHeroCard'
 import { calculateStreak, toDayOfWeek } from '@/lib/session/streak'
+import { getGreeting, getMotivationLine } from '@/lib/greeting'
 import type { ProgressStats } from '@/types/session'
+import type { WorkoutFocus } from '@/types/plan'
+import { FOCUS_LABELS } from '@/types/plan'
 
 async function loadProgressStats(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -16,7 +20,6 @@ async function loadProgressStats(
   const empty: ProgressStats = { currentStreak: 0, completedThisWeek: 0, plannedThisWeek: 0, totalCompleted: 0 }
 
   try {
-    // Total completed sessions
     const { count: total } = await supabase
       .from('workout_sessions')
       .select('id', { count: 'exact', head: true })
@@ -25,7 +28,6 @@ async function loadProgressStats(
 
     if (!total) return empty
 
-    // This week (Mon–Sun)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const dow = toDayOfWeek(today)
@@ -45,7 +47,6 @@ async function loadProgressStats(
       .gte('completed_at', `${mondayStr}T00:00:00`)
       .lte('completed_at', `${sundayStr}T23:59:59`)
 
-    // Planned training days this week (from workout plan)
     const { data: plan } = await supabase
       .from('workout_plans')
       .select('id, training_days_per_week')
@@ -54,7 +55,6 @@ async function loadProgressStats(
 
     const plannedThisWeek = plan?.training_days_per_week ?? 0
 
-    // Compute streak using pure function
     let streak = 0
     const { data: allSessions } = await supabase
       .from('workout_sessions')
@@ -88,6 +88,77 @@ async function loadProgressStats(
   }
 }
 
+interface TodayStatus {
+  isTrainingDay: boolean
+  planDayOfWeek?: number
+  focusLabel?: string
+  exerciseCount?: number
+  sessionCompleted?: boolean
+  sessionInProgress?: boolean
+}
+
+async function loadTodayStatus(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<TodayStatus> {
+  try {
+    const { data: plan } = await supabase
+      .from('workout_plans')
+      .select('id')
+      .eq('user_id', userId)
+      .single()
+
+    if (!plan) return { isTrainingDay: false }
+
+    const jsDay = new Date().getDay()
+    const dow = jsDay === 0 ? 7 : jsDay
+
+    const { data: planDay } = await supabase
+      .from('plan_days')
+      .select('id, day_of_week, is_rest_day, focus, display_label')
+      .eq('plan_id', plan.id)
+      .eq('day_of_week', dow)
+      .single()
+
+    if (!planDay || planDay.is_rest_day) return { isTrainingDay: false }
+
+    const { count: exerciseCount } = await supabase
+      .from('plan_exercises')
+      .select('id', { count: 'exact', head: true })
+      .eq('day_id', planDay.id)
+
+    const today = new Date()
+    const todayStart = new Date(today.setHours(0, 0, 0, 0))
+    const todayEnd = new Date(new Date().setHours(23, 59, 59, 999))
+
+    const { data: session } = await supabase
+      .from('workout_sessions')
+      .select('status')
+      .eq('user_id', userId)
+      .eq('plan_day_id', planDay.id)
+      .gte('started_at', todayStart.toISOString())
+      .lte('started_at', todayEnd.toISOString())
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const focusLabel =
+      planDay.display_label ??
+      (planDay.focus ? FOCUS_LABELS[planDay.focus as WorkoutFocus] : 'Training')
+
+    return {
+      isTrainingDay: true,
+      planDayOfWeek: dow,
+      focusLabel,
+      exerciseCount: exerciseCount ?? 0,
+      sessionCompleted: session?.status === 'completed',
+      sessionInProgress: session?.status === 'in_progress',
+    }
+  } catch {
+    return { isTrainingDay: false }
+  }
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -100,9 +171,13 @@ export default async function DashboardPage() {
     .single()
 
   const firstName = profile?.display_name?.split(' ')[0] ?? 'du'
-  const stats = await loadProgressStats(supabase, user.id)
 
-  // Calorie widget: only if user has set up a calorie goal
+  const [stats, todayStatus] = await Promise.all([
+    loadProgressStats(supabase, user.id),
+    loadTodayStatus(supabase, user.id),
+  ])
+
+  // Calorie widget
   const { data: nutritionProfile } = await supabase
     .from('profiles')
     .select('calorie_goal')
@@ -125,7 +200,7 @@ export default async function DashboardPage() {
     }
   }
 
-  // Mobility widget: today's completion status
+  // Mobility widget
   let mobilityCompletedToday = false
   try {
     const todayStr = new Date().toISOString().split('T')[0]
@@ -140,83 +215,51 @@ export default async function DashboardPage() {
     // table not yet migrated
   }
 
+  // Contextual greeting (QW-3) — Berlin timezone
+  const berlinHour = parseInt(
+    new Date().toLocaleString('de-DE', {
+      timeZone: 'Europe/Berlin',
+      hour: 'numeric',
+      hour12: false,
+    }),
+  )
+  const greeting = getGreeting(berlinHour)
+  const motivationLine = getMotivationLine(
+    stats.currentStreak,
+    stats.completedThisWeek,
+    stats.plannedThisWeek,
+  )
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-start justify-between mb-2">
           <div>
-            <p className="text-zinc-400 text-sm">Guten Tag,</p>
-            <h1 className="text-3xl font-bold text-zinc-50">{firstName} 👋</h1>
+            <p className="text-zinc-500 text-sm">{greeting},</p>
+            <h1 className="text-3xl font-bold text-zinc-50">{firstName}</h1>
+            <p className="text-sm text-zinc-400 mt-1">{motivationLine}</p>
           </div>
           <Link href="/profile">
-            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800">
+            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 mt-1">
               <User className="h-5 w-5" />
             </Button>
           </Link>
         </div>
 
-        {/* Progress stats (PROJ-5) */}
-        <div className="mb-4">
-          <ProgressStatsWidget stats={stats} />
-        </div>
+        {/* Today Hero Card (QW-1) */}
+        <TodayHeroCard {...todayStatus} />
 
-        {/* Calorie widget (PROJ-6) — only shown when goal is configured */}
+        {/* Progress stats */}
+        <ProgressStatsWidget stats={stats} />
+
+        {/* Calorie widget — only when goal is configured */}
         {calorieGoal && (
-          <div className="mb-4">
-            <CalorieWidget consumed={consumedKcal} goal={calorieGoal} />
-          </div>
+          <CalorieWidget consumed={consumedKcal} goal={calorieGoal} />
         )}
 
-        {/* Mobility widget (PROJ-7) */}
-        <div className="mb-4">
-          <MobilityWidget completedToday={mobilityCompletedToday} />
-        </div>
-
-        {/* Quick Links */}
-        <div className="space-y-4">
-          <Link href="/exercises">
-            <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 flex items-center gap-4 transition-colors cursor-pointer group">
-              <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center shrink-0">
-                <Dumbbell className="h-6 w-6 text-green-400" />
-              </div>
-              <div>
-                <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
-                  Übungsbibliothek
-                </p>
-                <p className="text-sm text-zinc-400">Kraft- &amp; Cardio-Übungen entdecken</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/plan">
-            <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 flex items-center gap-4 transition-colors cursor-pointer group">
-              <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center shrink-0">
-                <Calendar className="h-6 w-6 text-green-400" />
-              </div>
-              <div>
-                <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
-                  Trainingsplan
-                </p>
-                <p className="text-sm text-zinc-400">Dein personalisierter Wochenplan</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/nutrition">
-            <div className="bg-zinc-900 border border-zinc-800 hover:border-green-500/50 rounded-xl p-5 flex items-center gap-4 transition-colors cursor-pointer group">
-              <div className="h-12 w-12 bg-green-500/10 rounded-xl flex items-center justify-center shrink-0">
-                <Flame className="h-6 w-6 text-green-400" />
-              </div>
-              <div>
-                <p className="font-semibold text-zinc-50 group-hover:text-green-400 transition-colors">
-                  Kalorienzähler
-                </p>
-                <p className="text-sm text-zinc-400">Ernährung & Food-Tracking</p>
-              </div>
-            </div>
-          </Link>
-        </div>
+        {/* Mobility widget */}
+        <MobilityWidget completedToday={mobilityCompletedToday} />
       </div>
     </main>
   )

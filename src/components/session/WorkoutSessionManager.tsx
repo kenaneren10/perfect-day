@@ -27,6 +27,7 @@ export function WorkoutSessionManager({
   totalPlannedSets,
 }: Props) {
   const [summary, setSummary] = useState<SessionSummary | null>(null)
+  const [savedSetsCount, setSavedSetsCount] = useState(sessionSets.length)
   const [isPending, startTransition] = useTransition()
 
   const handleComplete = () => {
@@ -41,12 +42,32 @@ export function WorkoutSessionManager({
   }
 
   if (summary) {
-    return <SessionSummaryBlock summary={summary} />
+    return <SessionSummaryBlock summary={summary} celebrate />
   }
+
+  const progress = totalPlannedSets > 0
+    ? Math.min(100, Math.round((savedSetsCount / totalPlannedSets) * 100))
+    : 0
 
   return (
     <div>
       <SessionTimerBar startedAt={session.started_at} />
+
+      {/* Progress bar (QW-6) */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs text-zinc-500">Fortschritt</span>
+          <span className="text-xs font-medium text-zinc-400 tabular-nums">
+            {savedSetsCount}/{totalPlannedSets} Sätze
+          </span>
+        </div>
+        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-green-500 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
 
       <div className="space-y-4 mb-8">
         {exercises.map((pe) => (
@@ -56,6 +77,7 @@ export function WorkoutSessionManager({
             effectiveSets={pe.base_sets + setsBonus}
             sessionId={session.id}
             existingSets={sessionSets}
+            onSetSaved={() => setSavedSetsCount((c) => c + 1)}
           />
         ))}
       </div>

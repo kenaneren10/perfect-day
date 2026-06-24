@@ -22,9 +22,10 @@ interface Props {
   effectiveSets: number
   sessionId: string
   existingSets: SessionSet[]
+  onSetSaved?: () => void
 }
 
-export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, existingSets }: Props) {
+export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, existingSets, onSetSaved }: Props) {
   const isCardio = planExercise.exercise.category === 'cardio'
 
   const initialSets: SetState[] = Array.from({ length: effectiveSets }, (_, i) => {
@@ -70,6 +71,7 @@ export function ExerciseSetLogger({ planExercise, effectiveSets, sessionId, exis
       update(index, { saving: false })
     } else {
       update(index, { saved: true, saving: false })
+      onSetSaved?.()
     }
   }
 
